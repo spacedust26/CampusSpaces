@@ -1,8 +1,17 @@
-body {
-  font-family: Arial, sans-serif;
-  background-color: #f4f6f9;
+@font-face {
+  font-family: 'Euclid Circular A';
+  src: url('{% static "fonts/Euclid-Circular-A-Bold.ttf" %}') format('truetyp'),
+      url('{% static "fonts/Euclid-Circular-A-SemiBold.ttf" %}') format('truetyp'),
+      url('{% static "fonts/Euclid-Circular-A-Light.ttf" %}') format('truetyp'),
+      url('{% static "fonts/Euclid-Circular-A-Medium.ttf" %}') format('truetyp'),
+      url('{% static "fonts/Euclid-Circular-A-Regular.ttf" %}') format('truetyp');
+  font-weight: normal;
+  font-style: normal;
 }
 
+body {
+  font-family: 'Euclid Circular A';
+}
 
 .card {
   background-color: #ffffff;
