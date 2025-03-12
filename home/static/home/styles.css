@@ -20,6 +20,13 @@ body {
   padding: 0;
 }
 
+.header {
+  width: 100%;
+  min-height: 600px; /* Allows content to expand */
+  margin-top: 0;
+}
+
+
 /* Card Styles */
 .card {
   background-color: #ffffff;
@@ -142,6 +149,17 @@ form {
 
 /* Responsive Design */
 @media (max-width: 768px) {
+  .header {
+    min-height: auto;
+    padding-bottom: 50px;
+}
+.hero-text {
+    text-align: center;
+    align-items: center;
+}
+.card {
+    margin-top: 20px;
+}
   h1 {
     font-size: 2rem;
   }
@@ -156,6 +174,13 @@ form {
 
   .navbar-nav .nav-item {
     margin: 5px 0;
+  }
+
+  form{
+    align-items: center;
+  }
+  .about-us{
+    margin-top: 330px;
   }
 }
 
@@ -219,3 +244,84 @@ form {
   transform: translate3d(100%, 0, 0);
  }
  
+/* Contact Us Section */
+#contact {
+  background: #f8f9fa;
+  padding: 60px 0;
+}
+
+#contact h2 {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: #333;
+}
+
+#contact p {
+  font-size: 1.1rem;
+  color: #555;
+}
+
+#contact .card {
+  border: none;
+  border-radius: 12px;
+}
+
+#contact .form-control {
+  border-radius: 8px;
+  border: 1px solid #ccc;
+}
+
+#contact .btn-primary {
+  background-color: #3e4a24;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  padding: 10px;
+}
+
+#contact .btn-primary:hover {
+  background-color: #8c9f5e;
+}
+
+#contact h5 {
+  font-size: 1.3rem;
+  font-weight: bold;
+  margin-top: 15px;
+  color: #333;
+}
+
+#contact a {
+  text-decoration: none;
+  color: #3e4a24;
+}
+
+#contact a:hover {
+  color: #8c9f5e;
+}
+
+/* Social Icons */
+#contact .fa-lg {
+  font-size: 1.5rem;
+  color: #3e4a24;
+  transition: 0.3s;
+}
+
+#contact .fa-lg:hover {
+  color: #8c9f5e;
+  transform: scale(1.1);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  #contact .text-center {
+    text-align: center !important;
+  }
+  
+  #contact .col-lg-5, #contact .col-lg-7 {
+    text-align: center;
+  }
+
+  #contact .fa-lg {
+    margin: 0 10px;
+  }
+}

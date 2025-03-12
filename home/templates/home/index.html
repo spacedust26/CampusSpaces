@@ -35,7 +35,7 @@
   </nav>
 
   <!-- Hero Section -->
-  <div class="header finisher-header" style="width: 100%; height: 600px; margin-top: 0;">
+  <div class="header finisher-header mb-5" style="width: 100%; height: 600px; margin-top: 0;">
     <div class="container mt-5">
       <div class="row" style="justify-content: space-around;">
           <!-- Description Section -->
@@ -78,7 +78,7 @@
               
                   <!-- Image Section -->
                   <div class="col-md-6 text-center mt-3 mt-md-0">
-                    <img src="{% static 'home/CampusSpaces-Logo.png' %}" alt="Login Illustration" class="img-fluid">
+                    <img src="{% static 'home/CampusSpaces-Logo.png' %}" alt="Login Illustration" class="img-fluid" style="height: 200px; width: 200px;">
                   </div>
               
                 </div>
@@ -91,7 +91,69 @@
   </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script> 
+  <!-- About us section -->
+  <div class="about-us jumbotron jumbotron-fluid">
+    <div class="container">
+      <h1 class="display-4">About Us</h1>
+      <p class="lead" style="text-align: justify;">Welcome to CampusSpaces, your smart booking solution for university spaces! We simplify the process of reserving classrooms, halls, and meeting rooms, ensuring a seamless experience for students, faculty, and administrators.
+      Designed with efficiency in mind, CampusSpaces offers real-time availability, an intuitive booking system, and an integrated equipment inventory—all in one platform. Whether you're scheduling a lecture, a group study session, or a campus event, our system makes it quick, hassle-free, and organized.
+      
+      Driven by innovation and technology, we aim to revolutionize campus management, making it smarter, more accessible, and highly efficient. Join us in transforming the way university spaces are utilized! </p>
+    </div>
+  </div>
+
+   <!-- Contact Us Section -->
+<section id="contact" class="py-5 bg-light">
+  <div class="container">
+    <h1 class="text-center mb-4">Contact Us</h1>
+    <p class="text-center mb-4">Have questions or need assistance? Feel free to reach out!</p>
+    
+    <div class="row">
+      <!-- Contact Information -->
+      <div class="col-lg-5 mb-4">
+        <h5>📍 Address</h5>
+        <p>Manipal Institute of Technology</p>
+        
+        <h5>📞 Phone</h5>
+        <p>+123 456 7890</p>
+        
+        <h5>📧 Email</h5>
+        <p><a href="mailto:support@campusspaces.com">support@campusspaces.com</a></p>
+
+        <h5>🌐 Follow Us</h5>
+        <a href="#" class="me-2"><i class="fab fa-facebook fa-lg"></i></a>
+        <a href="#" class="me-2"><i class="fab fa-twitter fa-lg"></i></a>
+        <a href="#" class="me-2"><i class="fab fa-instagram fa-lg"></i></a>
+      </div>
+
+      <!-- Contact Form -->
+      <div class="col-lg-7">
+        <div class="card p-4 shadow">
+          <form>
+            <div class="mb-3">
+              <label for="name" class="form-label">Your Name</label>
+              <input type="text" class="form-control" id="name" placeholder="Enter your name" required>
+            </div>
+            <div class="mb-3">
+              <label for="email" class="form-label">Your Email</label>
+              <input type="email" class="form-control" id="email" placeholder="Enter your email" required>
+            </div>
+            <div class="mb-3">
+              <label for="message" class="form-label">Your Message</label>
+              <textarea class="form-control" id="message" rows="4" placeholder="Write your message" required></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary w-100">Send Message</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+
+</body>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script> 
   <script src="{% static 'js/finisher-header.es5.min.js' %}" type="text/javascript"></script>
   <script type="text/javascript">
     new FinisherHeader({
@@ -132,6 +194,4 @@
       ]
     });
     </script>
-
-</body>
 </html>
