@@ -9,11 +9,13 @@ body {
 }
 .sidebar {
   width: 250px;
-  height: 100vh;
+  min-height: 100vh;  /* Ensures it always stretches */
   background-color: #3e4a24;
   color: white;
   padding: 20px;
   transition: width 0.3s;
+  display: flex;
+  flex-direction: column; /* Keeps items stacked vertically */
 }
 .sidebar.collapsed {
   width: 60px;
@@ -55,4 +57,17 @@ body {
 
 .dashboard-heading{
   color: #4a582a;
+  margin-bottom: 3%;
+}
+
+.collapsed ul {
+  display: none;
+}
+
+.card-div{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
 }
