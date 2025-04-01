@@ -1,0 +1,30 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{% static 'dashboard/styles.css' %}">
+    <title>Dashboard</title>
+</head>
+<body>
+    <div class="sidebar" id="sidebar">
+        <div class="toggle-btn" onclick="toggleSidebar()">☰</div>
+        <ul>
+            <li><a href="{% url 'view_space' %}">View Space</a></li>
+            <li><a href="{% url 'view_equipment' %}">View Equipment</a></li>
+            <li><a href="{% url 'booking_cart' %}">Go to Booking Cart</a></li>
+            <li><a href="{% url 'history' %}">History</a></li>
+            <li style="background-color: rgb(87, 21, 21);"><a href="{% url 'dashboard' %}">Logout</a></li>
+        </ul>
+    </div>
+    <div class="content">
+        <h1 class="dashboard-heading">CampusSpaces</h1>
+    </div>
+    <script>
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('collapsed');
+        }
+    </script>
+</body>
+</html>

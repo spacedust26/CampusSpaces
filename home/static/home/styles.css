@@ -1,18 +1,6 @@
-/* Import Euclid Circular A Font */
-@font-face {
-  font-family: 'Euclid Circular A';
-  src: url('{% static "fonts/Euclid-Circular-A-Bold.ttf" %}') format('truetype'),
-       url('{% static "fonts/Euclid-Circular-A-SemiBold.ttf" %}') format('truetype'),
-       url('{% static "fonts/Euclid-Circular-A-Light.ttf" %}') format('truetype'),
-       url('{% static "fonts/Euclid-Circular-A-Medium.ttf" %}') format('truetype'),
-       url('{% static "fonts/Euclid-Circular-A-Regular.ttf" %}') format('truetype');
-  font-weight: normal;
-  font-style: normal;
-}
-
 /* Global Styles */
 body {
-  font-family: 'Euclid Circular A', 'Times New Roman', Times, serif;
+  font-family: 'system-ui, Times New Roman', Times, serif;
   font-size: 20px;
   background-color: #f8f9fa;
   color: #333;

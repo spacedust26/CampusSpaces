@@ -21,5 +21,10 @@ from home import views
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', views.index, name='index'),
+    path('dashboard/', views.dashboard, name='dashboard'),
+    path('view-space/', views.view_space, name='view_space'),
+    path('view-equipment/', views.view_equipment, name='view_equipment'),
+    path('booking-cart/', views.booking_cart, name='booking_cart'),
+    path('history/', views.history, name='history'),
 ]
 
