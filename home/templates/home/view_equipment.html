@@ -55,9 +55,14 @@
                     <p class="card-text">
                         <strong>Type:</strong> {{ item.get_equipment_type_display }}<br>
                         <strong>Building:</strong> {{ item.building.name }}<br>
-                        <strong>Quantity:</strong> {{ item.quantity }}<br>
+                        {% if item.room %}
+                        <strong>Room:</strong> {{ item.room.room_number }}<br>
+                        {% endif %}
                         {% if item.model_number %}
                         <strong>Model:</strong> {{ item.model_number }}<br>
+                        {% endif %}
+                        {% if item.serial_number %}
+                        <strong>S/N:</strong> {{ item.serial_number }}<br>
                         {% endif %}
                     </p>
                     <div class="mt-auto">

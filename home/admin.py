@@ -40,7 +40,7 @@ class RoomAdmin(admin.ModelAdmin):
 
 @admin.register(Equipment)
 class EquipmentAdmin(admin.ModelAdmin):
-    list_display = ('name', 'equipment_type', 'quantity', 'status', 'building')
+    list_display = ('name', 'equipment_type', 'status', 'building')
     list_filter = ('equipment_type', 'status', 'building')
     search_fields = ('name', 'model_number')
 
@@ -53,7 +53,7 @@ class BookingAdmin(admin.ModelAdmin):
 
 @admin.register(BookingEquipment)
 class BookingEquipmentAdmin(admin.ModelAdmin):
-    list_display = ('booking', 'equipment', 'quantity')
+    list_display = ('booking', 'equipment')
     list_filter = ('equipment__equipment_type',)
 
 @admin.register(Notification)
