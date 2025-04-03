@@ -1,0 +1,144 @@
+{% extends "home/dashboard.html" %}
+{% load static %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="display-5">Notifications</h1>
+        <p class="lead">View all your system notifications.</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">All Notifications</h5>
+                <span class="badge bg-light text-dark">{{ notifications|length }} notifications</span>
+            </div>
+            <div class="card-body">
+                {% if notifications %}
+                <div class="list-group">
+                    {% for notification in notifications %}
+                    <div class="list-group-item list-group-item-action notification-item {% if not notification.read %}unread{% endif %}">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h5 class="mb-1">
+                                {% if not notification.read %}
+                                <span class="badge bg-danger me-2">New</span>
+                                {% endif %}
+                                {{ notification.title }}
+                            </h5>
+                            <small class="text-muted">{{ notification.created_at|timesince }} ago</small>
+                        </div>
+                        <p class="mb-1">{{ notification.message }}</p>
+                        <div class="d-flex justify-content-between align-items-center mt-2">
+                            <small class="text-muted">
+                                {% if notification.notification_type == 'BOOKING_CREATED' %}
+                                <i class="bi bi-calendar-plus text-success me-1"></i> Booking Created
+                                {% elif notification.notification_type == 'BOOKING_APPROVED' %}
+                                <i class="bi bi-check-circle text-success me-1"></i> Booking Approved
+                                {% elif notification.notification_type == 'BOOKING_REJECTED' %}
+                                <i class="bi bi-x-circle text-danger me-1"></i> Booking Rejected
+                                {% elif notification.notification_type == 'BOOKING_CANCELLED' %}
+                                <i class="bi bi-calendar-x text-secondary me-1"></i> Booking Cancelled
+                                {% elif notification.notification_type == 'CONFLICT' %}
+                                <i class="bi bi-exclamation-triangle text-warning me-1"></i> Booking Conflict
+                                {% elif notification.notification_type == 'HR_TASK' %}
+                                <i class="bi bi-tools text-primary me-1"></i> HR Task
+                                {% endif %}
+                            </small>
+                            {% if notification.booking %}
+                            <a href="#" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#bookingModal{{ notification.booking.id }}">View Booking</a>
+                            
+                            <!-- Booking Details Modal -->
+                            <div class="modal fade" id="bookingModal{{ notification.booking.id }}" tabindex="-1" aria-labelledby="bookingModalLabel{{ notification.booking.id }}" aria-hidden="true">
+                                <div class="modal-dialog modal-lg">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="bookingModalLabel{{ notification.booking.id }}">Booking Details</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <h6>Event Information</h6>
+                                                    <ul class="list-group list-group-flush mb-3">
+                                                        <li class="list-group-item"><strong>Title:</strong> {{ notification.booking.title }}</li>
+                                                        <li class="list-group-item"><strong>Description:</strong> {{ notification.booking.description|default:"No description provided." }}</li>
+                                                        <li class="list-group-item"><strong>Date:</strong> {{ notification.booking.start_time|date:"M d, Y" }}</li>
+                                                        <li class="list-group-item"><strong>Time:</strong> {{ notification.booking.start_time|time:"H:i" }} - {{ notification.booking.end_time|time:"H:i" }}</li>
+                                                        {% if notification.booking.organization %}
+                                                        <li class="list-group-item"><strong>Organization:</strong> {{ notification.booking.organization.name }}</li>
+                                                        {% endif %}
+                                                        <li class="list-group-item"><strong>Status:</strong> 
+                                                            {% if notification.booking.status == 'APPROVED' %}
+                                                                <span class="badge bg-success">{{ notification.booking.get_status_display }}</span>
+                                                            {% elif notification.booking.status == 'PENDING' %}
+                                                                <span class="badge bg-warning text-dark">{{ notification.booking.get_status_display }}</span>
+                                                            {% elif notification.booking.status == 'REJECTED' %}
+                                                                <span class="badge bg-danger">{{ notification.booking.get_status_display }}</span>
+                                                                {% if notification.booking.rejected_reason %}
+                                                                <br><small class="text-danger">Reason: {{ notification.booking.rejected_reason }}</small>
+                                                                {% endif %}
+                                                            {% elif notification.booking.status == 'CANCELLED' %}
+                                                                <span class="badge bg-secondary">{{ notification.booking.get_status_display }}</span>
+                                                            {% elif notification.booking.status == 'COMPLETED' %}
+                                                                <span class="badge bg-info">{{ notification.booking.get_status_display }}</span>
+                                                            {% endif %}
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <h6>Room Information</h6>
+                                                    <ul class="list-group list-group-flush mb-3">
+                                                        <li class="list-group-item"><strong>Room:</strong> {{ notification.booking.room.name }}</li>
+                                                        <li class="list-group-item"><strong>Building:</strong> {{ notification.booking.room.building.name }}</li>
+                                                        <li class="list-group-item"><strong>Room Number:</strong> {{ notification.booking.room.room_number }}</li>
+                                                        <li class="list-group-item"><strong>Capacity:</strong> {{ notification.booking.room.capacity }} people</li>
+                                                        <li class="list-group-item"><strong>Type:</strong> {{ notification.booking.room.get_room_type_display }}</li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                            {% if notification.booking.status == 'APPROVED' and notification.booking.end_time > now %}
+                                            <a href="{% url 'cancel_booking' notification.booking.id %}" class="btn btn-danger" onclick="return confirm('Are you sure you want to cancel this booking?')">Cancel Booking</a>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <img src="" alt="No Notifications" style="width: 150px; height: 150px; opacity: 0.5;">
+                    <h4 class="mt-3">No notifications</h4>
+                    <p class="text-muted">You don't have any notifications yet.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .notification-item {
+        border-left: 4px solid #3e4a24;
+        transition: background-color 0.3s;
+    }
+    
+    .notification-item:hover {
+        background-color: rgba(62, 74, 36, 0.1);
+    }
+    
+    .notification-item.unread {
+        border-left: 4px solid #dc3545;
+        background-color: rgba(220, 53, 69, 0.1);
+    }
+</style>
+{% endblock %}
