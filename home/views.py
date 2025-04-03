@@ -205,7 +205,6 @@ def room_detail(request, room_id):
                     BookingEquipment.objects.create(
                         booking=booking,
                         equipment=equipment,
-                        quantity=1  # Default quantity
                     )
             
             # Create notification for the user
@@ -259,12 +258,12 @@ def equipment_detail(request, equipment_id):
     """View details of a specific equipment"""
     equipment = get_object_or_404(Equipment, id=equipment_id, status='AVAILABLE')
     
-    # Get rooms that have this equipment
-    rooms_with_equipment = equipment.rooms.all()
+    # Get the room associated with this equipment (if any)
+    room = equipment.room
     
     context = {
         'equipment': equipment,
-        'rooms_with_equipment': rooms_with_equipment,
+        'room': room,
     }
     
     return render(request, 'home/equipment_detail.html', context)

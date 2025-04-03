@@ -55,8 +55,8 @@
                     {% for item in equipment %}
                     <li class="list-group-item">
                         {{ item.equipment.name }} ({{ item.equipment.get_equipment_type_display }})
-                        {% if item.quantity > 1 %}
-                        <span class="badge bg-secondary">x{{ item.quantity }}</span>
+                        {% if item.equipment.room %}
+                        <small class="text-muted">Room: {{ item.equipment.room.room_number }}</small>
                         {% endif %}
                     </li>
                     {% endfor %}

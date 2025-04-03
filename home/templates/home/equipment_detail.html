@@ -41,7 +41,9 @@
                 <ul class="list-group list-group-flush mb-3">
                     <li class="list-group-item"><strong>Type:</strong> {{ equipment.get_equipment_type_display }}</li>
                     <li class="list-group-item"><strong>Building:</strong> {{ equipment.building.name }}</li>
-                    <li class="list-group-item"><strong>Quantity Available:</strong> {{ equipment.quantity }}</li>
+                    {% if equipment.serial_number %}
+                    <li class="list-group-item"><strong>Serial Number:</strong> {{ equipment.serial_number }}</li>
+                    {% endif %}
                     {% if equipment.model_number %}
                     <li class="list-group-item"><strong>Model Number:</strong> {{ equipment.model_number }}</li>
                     {% endif %}
@@ -53,17 +55,16 @@
         </div>
     </div>
     
-    <!-- Rooms with this Equipment Section -->
+    <!-- Associated Room Section -->
     <div class="col-md-7">
         <div class="card shadow-sm">
             <div class="card-header bg-primary text-white">
-                <h5 class="mb-0">Rooms with this Equipment</h5>
+                <h5 class="mb-0">Associated Room</h5>
             </div>
             <div class="card-body">
-                {% if rooms_with_equipment %}
+                {% if room %}
                 <div class="row">
-                    {% for room in rooms_with_equipment %}
-                    <div class="col-md-6 mb-3">
+                    <div class="col-md-12 mb-3">
                         <div class="card h-100">
                             {% if room.image_url %}
                             <img src="{{ room.image_url }}" class="card-img-top" alt="{{ room.name }}" style="height: 150px; object-fit: cover;">
@@ -81,11 +82,10 @@
                             </div>
                         </div>
                     </div>
-                    {% endfor %}
                 </div>
                 {% else %}
                 <div class="alert alert-info" role="alert">
-                    This equipment is not permanently assigned to any rooms. It can be requested as additional equipment when booking a room.
+                    This equipment is not currently assigned to any room. It can be requested as additional equipment when booking a room.
                 </div>
                 {% endif %}
             </div>

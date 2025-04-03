@@ -85,7 +85,7 @@ class Resource(models.Model):
         ('MAINTENANCE', 'Under Maintenance'),
         ('RESERVED', 'Reserved'),
     ]
-    
+    id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True, null=True)
     image_url = models.URLField(blank=True, null=True)
@@ -126,11 +126,12 @@ class Equipment(Resource):
     
     equipment_type = models.CharField(max_length=20, choices=EQUIPMENT_TYPES)
     model_number = models.CharField(max_length=50, blank=True, null=True)
-    quantity = models.IntegerField(default=1)
-    rooms = models.ManyToManyField(Room, blank=True, related_name='equipment')
+    room = models.ForeignKey(Room, on_delete=models.SET_NULL, related_name='equipment', null=True, blank=True)
+    serial_number = models.CharField(max_length=100, blank=True, null=True, help_text='Unique identifier for this physical equipment')
     
     def __str__(self):
-        return f"{self.name} - {self.get_equipment_type_display()}"
+        room_info = f" - {self.room.room_number}" if self.room else ""
+        return f"{self.name} - {self.get_equipment_type_display()}{room_info}"
 
 class Booking(models.Model):
     """Booking model for room and equipment reservations"""
@@ -173,13 +174,13 @@ class BookingEquipment(models.Model):
     """Many-to-many relationship between bookings and equipment"""
     booking = models.ForeignKey(Booking, on_delete=models.CASCADE, related_name='booking_equipment')
     equipment = models.ForeignKey(Equipment, on_delete=models.CASCADE)
-    quantity = models.IntegerField(default=1)
     
     class Meta:
         unique_together = ('booking', 'equipment')
     
     def __str__(self):
-        return f"{self.booking.title} - {self.equipment.name}"
+        room_info = f" ({self.equipment.room.room_number})" if self.equipment.room else ""
+        return f"{self.booking.title} - {self.equipment.name}{room_info}"
 
 class Notification(models.Model):
     """Notification model for system notifications"""
