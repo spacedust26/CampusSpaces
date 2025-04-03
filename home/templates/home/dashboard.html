@@ -4,26 +4,264 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="{% static 'dashboard/styles.css' %}">
-    <title>Dashboard</title>
+    <title>Dashboard - CampusSpaces</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="{% static 'home/styles.css' %}">
+    <link rel="icon" type="image/x-icon" href="{% static 'home/favicon.ico' %}">
+    <style>
+        .sidebar {
+            height: 100%;
+            width: 250px;
+            position: fixed;
+            z-index: 1;
+            top: 0;
+            left: 0;
+            background-color: #3e4a24;
+            overflow-x: hidden;
+            transition: 0.5s;
+            padding-top: 60px;
+            color: white;
+        }
+        
+        .sidebar.collapsed {
+            width: 0;
+        }
+        
+        .sidebar ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        
+        .sidebar ul li {
+            padding: 15px 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .sidebar ul li a {
+            color: white;
+            text-decoration: none;
+            display: block;
+        }
+        
+        .sidebar ul li:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .toggle-btn {
+            position: fixed;
+            left: 15px;
+            top: 15px;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 2;
+            color: white;
+        }
+        
+        .content {
+            margin-left: 250px;
+            padding: 20px;
+            transition: margin-left 0.5s;
+        }
+        
+        .content.collapsed {
+            margin-left: 0;
+        }
+        
+        .notification-badge {
+            position: relative;
+            top: -8px;
+            left: -5px;
+            font-size: 0.7em;
+        }
+        
+        .booking-card {
+            transition: transform 0.3s;
+        }
+        
+        .booking-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        
+        .notification-item {
+            border-left: 4px solid #3e4a24;
+            transition: background-color 0.3s;
+        }
+        
+        .notification-item:hover {
+            background-color: rgba(62, 74, 36, 0.1);
+        }
+        
+        .notification-item.unread {
+            border-left: 4px solid #dc3545;
+            background-color: rgba(220, 53, 69, 0.1);
+        }
+    </style>
 </head>
 <body>
     <div class="sidebar" id="sidebar">
         <div class="toggle-btn" onclick="toggleSidebar()">☰</div>
+        <div class="text-center mb-4">
+            <img src="{% static 'home/CampusSpaces-Logo.png' %}" alt="Logo" width="100" height="100">
+            <h5 class="mt-2">{{ request.user.get_full_name }}</h5>
+            <p class="text-muted small">{{ request.user.profile.get_role_display }}</p>
+        </div>
         <ul>
-            <li><a href="{% url 'view_space' %}">View Space</a></li>
-            <li><a href="{% url 'view_equipment' %}">View Equipment</a></li>
-            <li><a href="{% url 'booking_cart' %}">Go to Booking Cart</a></li>
-            <li><a href="{% url 'history' %}">History</a></li>
-            <li style="background-color: rgb(87, 21, 21);"><a href="{% url 'dashboard' %}">Logout</a></li>
+            <li><a href="{% url 'dashboard' %}"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
+            <li><a href="{% url 'view_space' %}"><i class="bi bi-building"></i> View Spaces</a></li>
+            <li><a href="{% url 'view_equipment' %}"><i class="bi bi-tools"></i> View Equipment</a></li>
+            <li><a href="{% url 'booking_cart' %}"><i class="bi bi-cart"></i> Booking Cart 
+                {% if pending_bookings %}
+                <span class="badge bg-danger rounded-pill notification-badge">{{ pending_bookings|length }}</span>
+                {% endif %}
+            </a></li>
+            <li><a href="{% url 'history' %}"><i class="bi bi-clock-history"></i> Booking History</a></li>
+            <li><a href="{% url 'notifications' %}"><i class="bi bi-bell"></i> Notifications 
+                {% if notifications %}
+                <span class="badge bg-danger rounded-pill notification-badge">{{ notifications|length }}</span>
+                {% endif %}
+            </a></li>
+            {% if user.profile.role == 'ADMIN' %}
+            <li><a href="{% url 'admin:index' %}"><i class="bi bi-gear-fill"></i> Admin Panel</a></li>
+            {% endif %}
+            <li style="background-color: rgb(87, 21, 21);"><a href="{% url 'logout' %}"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
         </ul>
     </div>
-    <div class="content">
-        <h1 class="dashboard-heading">CampusSpaces</h1>
+    
+    <div class="content" id="content">
+        {% if messages %}
+        <div class="row">
+            <div class="col-12">
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        
+        {% block content %}
+        <div class="row mb-4">
+            <div class="col-12">
+                <h1 class="display-5">Welcome, {{ request.user.first_name }}!</h1>
+                <p class="lead">Here's an overview of your bookings and notifications.</p>
+            </div>
+        </div>
+        
+        <div class="row">
+            <!-- Upcoming Bookings Section -->
+            <div class="col-md-6 mb-4">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">Upcoming Bookings</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if upcoming_bookings %}
+                            <div class="list-group">
+                                {% for booking in upcoming_bookings %}
+                                <div class="list-group-item list-group-item-action booking-card">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h5 class="mb-1">{{ booking.title }}</h5>
+                                        <small class="text-muted">{{ booking.start_time|date:"M d, Y" }}</small>
+                                    </div>
+                                    <p class="mb-1">{{ booking.room.name }} - {{ booking.room.building.name }}</p>
+                                    <small class="text-muted">{{ booking.start_time|time:"H:i" }} - {{ booking.end_time|time:"H:i" }}</small>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <p class="text-center text-muted my-4">You don't have any upcoming bookings.</p>
+                            <div class="d-grid gap-2">
+                                <a href="{% url 'view_space' %}" class="btn btn-outline-success">Book a Space</a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Notifications Section -->
+            <div class="col-md-6 mb-4">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">Recent Notifications</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if notifications %}
+                            <div class="list-group">
+                                {% for notification in notifications %}
+                                <div class="list-group-item list-group-item-action notification-item {% if not notification.read %}unread{% endif %}">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h5 class="mb-1">{{ notification.title }}</h5>
+                                        <small class="text-muted">{{ notification.created_at|timesince }} ago</small>
+                                    </div>
+                                    <p class="mb-1">{{ notification.message }}</p>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <div class="d-grid gap-2 mt-3">
+                                <a href="{% url 'notifications' %}" class="btn btn-outline-info">View All Notifications</a>
+                            </div>
+                        {% else %}
+                            <p class="text-center text-muted my-4">You don't have any notifications.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Pending Approvals Section (for Faculty and Admin) -->
+        {% if pending_approvals %}
+        <div class="row">
+            <div class="col-12 mb-4">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0">Pending Approvals</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Title</th>
+                                        <th>Requested By</th>
+                                        <th>Room</th>
+                                        <th>Date & Time</th>
+                                        <th>Organization</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for booking in pending_approvals %}
+                                    <tr>
+                                        <td>{{ booking.title }}</td>
+                                        <td>{{ booking.user.get_full_name }}</td>
+                                        <td>{{ booking.room.name }}</td>
+                                        <td>{{ booking.start_time|date:"M d, Y" }} {{ booking.start_time|time:"H:i" }} - {{ booking.end_time|time:"H:i" }}</td>
+                                        <td>{{ booking.organization.name|default:"N/A" }}</td>
+                                        <td>
+                                            <a href="{% url 'booking_approval_detail' booking.id %}" class="btn btn-sm btn-outline-primary">Review</a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% endblock %}
     </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
     <script>
         function toggleSidebar() {
             document.getElementById('sidebar').classList.toggle('collapsed');
+            document.getElementById('content').classList.toggle('collapsed');
         }
     </script>
 </body>

@@ -1,0 +1,236 @@
+{% extends "home/dashboard.html" %}
+{% load static %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Booking Approval</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Booking Details Section -->
+    <div class="col-md-7">
+        <div class="card shadow-sm">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">Booking Request Details</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Event Information</h6>
+                        <ul class="list-group list-group-flush mb-3">
+                            <li class="list-group-item"><strong>Title:</strong> {{ booking.title }}</li>
+                            <li class="list-group-item"><strong>Description:</strong> {{ booking.description|default:"No description provided." }}</li>
+                            <li class="list-group-item"><strong>Date:</strong> {{ booking.start_time|date:"M d, Y" }}</li>
+                            <li class="list-group-item"><strong>Time:</strong> {{ booking.start_time|time:"H:i" }} - {{ booking.end_time|time:"H:i" }}</li>
+                            {% if booking.organization %}
+                            <li class="list-group-item"><strong>Organization:</strong> {{ booking.organization.name }}</li>
+                            {% endif %}
+                            <li class="list-group-item"><strong>Requested By:</strong> {{ booking.user.get_full_name|default:booking.user.username }}</li>
+                            <li class="list-group-item"><strong>Requested On:</strong> {{ booking.created_at|date:"M d, Y H:i" }}</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Room Information</h6>
+                        <ul class="list-group list-group-flush mb-3">
+                            <li class="list-group-item"><strong>Room:</strong> {{ booking.room.name }}</li>
+                            <li class="list-group-item"><strong>Building:</strong> {{ booking.room.building.name }}</li>
+                            <li class="list-group-item"><strong>Room Number:</strong> {{ booking.room.room_number }}</li>
+                            <li class="list-group-item"><strong>Capacity:</strong> {{ booking.room.capacity }} people</li>
+                            <li class="list-group-item"><strong>Type:</strong> {{ booking.room.get_room_type_display }}</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                {% with equipment=booking.booking_equipment.all %}
+                {% if equipment %}
+                <h6>Additional Equipment</h6>
+                <ul class="list-group list-group-flush">
+                    {% for item in equipment %}
+                    <li class="list-group-item">
+                        {{ item.equipment.name }} ({{ item.equipment.get_equipment_type_display }})
+                        {% if item.quantity > 1 %}
+                        <span class="badge bg-secondary">x{{ item.quantity }}</span>
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+                {% endwith %}
+            </div>
+        </div>
+        
+        <!-- Conflicting Bookings Section (if any) -->
+        {% if conflicting_bookings %}
+        <div class="card shadow-sm mt-4">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0">Conflicting Bookings</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    There are existing approved bookings that conflict with this request.
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Event</th>
+                                <th>Booked By</th>
+                                <th>Organization</th>
+                                <th>Date & Time</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for conflict in conflicting_bookings %}
+                            <tr>
+                                <td>{{ conflict.title }}</td>
+                                <td>{{ conflict.user.get_full_name|default:conflict.user.username }}</td>
+                                <td>{{ conflict.organization.name|default:"N/A" }}</td>
+                                <td>{{ conflict.start_time|date:"M d, Y" }} {{ conflict.start_time|time:"H:i" }} - {{ conflict.end_time|time:"H:i" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="alert alert-info mt-3">
+                    <h6>Conflict Resolution Guidelines:</h6>
+                    <ul>
+                        <li>Faculty members have priority over students.</li>
+                        <li>Higher-level organization representatives have priority.</li>
+                        <li>As an admin, you can override existing bookings if necessary.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Approval Form Section -->
+    <div class="col-md-5">
+        <div class="card shadow-sm">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">Approval Decision</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" class="needs-validation" novalidate>
+                    {% csrf_token %}
+                    
+                    <div class="mb-4">
+                        <label class="form-label">Decision</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="action" id="approve" value="APPROVE" checked>
+                            <label class="form-check-label" for="approve">
+                                <span class="text-success fw-bold">Approve</span> - Accept this booking request
+                            </label>
+                        </div>
+                        <div class="form-check mt-2">
+                            <input class="form-check-input" type="radio" name="action" id="reject" value="REJECT">
+                            <label class="form-check-label" for="reject">
+                                <span class="text-danger fw-bold">Reject</span> - Decline this booking request
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3 rejection-reason" style="display: none;">
+                        <label for="id_rejected_reason" class="form-label">Rejection Reason</label>
+                        {{ form.rejected_reason }}
+                        <div class="form-text">
+                            Please provide a reason for rejecting this booking request.
+                        </div>
+                        {% if form.rejected_reason.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.rejected_reason.errors }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {{ form.non_field_errors }}
+                    </div>
+                    {% endif %}
+                    
+                    <div class="d-grid gap-2 mt-4">
+                        <button type="submit" class="btn btn-success">Submit Decision</button>
+                        <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- User Information Section -->
+        <div class="card shadow-sm mt-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">Requester Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="flex-shrink-0">
+                        <div class="bg-light rounded-circle d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                            <i class="bi bi-person-fill" style="font-size: 2rem;"></i>
+                        </div>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h5 class="mb-0">{{ booking.user.get_full_name|default:booking.user.username }}</h5>
+                        <p class="text-muted mb-0">{{ booking.user.email }}</p>
+                        <p class="text-muted mb-0">{{ booking.user.profile.get_role_display }}</p>
+                    </div>
+                </div>
+                
+                {% if booking.user.profile.organizations.all %}
+                <h6>Organizations</h6>
+                <ul class="list-group list-group-flush">
+                    {% for org in booking.user.profile.organizations.all %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        {{ org.name }}
+                        <span class="badge bg-primary rounded-pill">
+                            {% with level=booking.user.profile.userorganization_set.get.level %}
+                            {% if level == 1 %}
+                                Member
+                            {% elif level == 2 %}
+                                Representative
+                            {% elif level == 3 %}
+                                Leader
+                            {% endif %}
+                            {% endwith %}
+                        </span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Show/hide rejection reason based on selected action
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add Bootstrap classes to form elements
+        document.querySelectorAll('textarea').forEach(function(el) {
+            el.classList.add('form-control');
+        });
+        
+        // Show/hide rejection reason
+        const actionRadios = document.querySelectorAll('input[name="action"]');
+        const rejectionReasonDiv = document.querySelector('.rejection-reason');
+        
+        actionRadios.forEach(function(radio) {
+            radio.addEventListener('change', function() {
+                if (this.value === 'REJECT') {
+                    rejectionReasonDiv.style.display = 'block';
+                } else {
+                    rejectionReasonDiv.style.display = 'none';
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

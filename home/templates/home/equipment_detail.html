@@ -1,0 +1,110 @@
+{% extends "home/dashboard.html" %}
+{% load static %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'view_equipment' %}">Equipment</a></li>
+                <li class="breadcrumb-item active" aria-current="page">{{ equipment.name }}</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Equipment Details Section -->
+    <div class="col-md-5">
+        <div class="card shadow-sm h-100">
+            {% if equipment.image_url %}
+            <img src="{{ equipment.image_url }}" class="card-img-top" alt="{{ equipment.name }}" style="height: 300px; object-fit: cover;">
+            {% else %}
+            <img src="" class="card-img-top" alt="{{ equipment.name }}" style="height: 300px; object-fit: cover;">
+            {% endif %}
+            <div class="card-body">
+                <h3 class="card-title">{{ equipment.name }}</h3>
+                <div class="mb-3">
+                    <span class="badge bg-success">{{ equipment.get_status_display }}</span>
+                    <span class="badge bg-primary">{{ equipment.get_equipment_type_display }}</span>
+                </div>
+                <p class="card-text">
+                    {% if equipment.description %}
+                    {{ equipment.description }}
+                    {% else %}
+                    No description available.
+                    {% endif %}
+                </p>
+                <hr>
+                <h5>Equipment Details</h5>
+                <ul class="list-group list-group-flush mb-3">
+                    <li class="list-group-item"><strong>Type:</strong> {{ equipment.get_equipment_type_display }}</li>
+                    <li class="list-group-item"><strong>Building:</strong> {{ equipment.building.name }}</li>
+                    <li class="list-group-item"><strong>Quantity Available:</strong> {{ equipment.quantity }}</li>
+                    {% if equipment.model_number %}
+                    <li class="list-group-item"><strong>Model Number:</strong> {{ equipment.model_number }}</li>
+                    {% endif %}
+                    {% if equipment.hr_responsible %}
+                    <li class="list-group-item"><strong>Responsible Personnel:</strong> {{ equipment.hr_responsible.name }}</li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Rooms with this Equipment Section -->
+    <div class="col-md-7">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Rooms with this Equipment</h5>
+            </div>
+            <div class="card-body">
+                {% if rooms_with_equipment %}
+                <div class="row">
+                    {% for room in rooms_with_equipment %}
+                    <div class="col-md-6 mb-3">
+                        <div class="card h-100">
+                            {% if room.image_url %}
+                            <img src="{{ room.image_url }}" class="card-img-top" alt="{{ room.name }}" style="height: 150px; object-fit: cover;">
+                            {% else %}
+                            <img src="" class="card-img-top" alt="{{ room.name }}" style="height: 150px; object-fit: cover;">
+                            {% endif %}
+                            <div class="card-body">
+                                <h5 class="card-title">{{ room.name }}</h5>
+                                <p class="card-text">
+                                    <strong>Building:</strong> {{ room.building.name }}<br>
+                                    <strong>Room Number:</strong> {{ room.room_number }}<br>
+                                    <strong>Capacity:</strong> {{ room.capacity }} people
+                                </p>
+                                <a href="{% url 'room_detail' room.id %}" class="btn btn-outline-primary w-100">View Room Details</a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="alert alert-info" role="alert">
+                    This equipment is not permanently assigned to any rooms. It can be requested as additional equipment when booking a room.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Equipment Availability Calendar (Future Enhancement) -->
+        <div class="card shadow-sm mt-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">Equipment Availability</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-center text-muted my-3">
+                    To book this equipment, please select a room first and then add this equipment to your booking.
+                </p>
+                <div class="d-grid gap-2">
+                    <a href="{% url 'view_space' %}" class="btn btn-outline-info">Browse Available Rooms</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

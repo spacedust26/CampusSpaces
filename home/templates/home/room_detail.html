@@ -1,0 +1,218 @@
+{% extends "home/dashboard.html" %}
+{% load static %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'view_space' %}">Spaces</a></li>
+                <li class="breadcrumb-item active" aria-current="page">{{ room.name }}</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <!-- Room Details Section -->
+    <div class="col-md-5">
+        <div class="card shadow-sm h-100">
+            {% if room.image_url %}
+            <img src="{{ room.image_url }}" class="card-img-top" alt="{{ room.name }}" style="height: 300px; object-fit: cover;">
+            {% else %}
+            <img src="" class="card-img-top" alt="{{ room.name }}" style="height: 300px; object-fit: cover;">
+            {% endif %}
+            <div class="card-body">
+                <h3 class="card-title">{{ room.name }}</h3>
+                <div class="mb-3">
+                    <span class="badge bg-success">{{ room.get_status_display }}</span>
+                    <span class="badge bg-primary">{{ room.get_room_type_display }}</span>
+                </div>
+                <p class="card-text">
+                    {% if room.description %}
+                    {{ room.description }}
+                    {% else %}
+                    No description available.
+                    {% endif %}
+                </p>
+                <hr>
+                <h5>Room Details</h5>
+                <ul class="list-group list-group-flush mb-3">
+                    <li class="list-group-item"><strong>Building:</strong> {{ room.building.name }}</li>
+                    <li class="list-group-item"><strong>Room Number:</strong> {{ room.room_number }}</li>
+                    <li class="list-group-item"><strong>Floor:</strong> {{ room.floor }}</li>
+                    <li class="list-group-item"><strong>Capacity:</strong> {{ room.capacity }} people</li>
+                </ul>
+                
+                {% if room.equipment.all %}
+                <h5>Available Equipment</h5>
+                <ul class="list-group list-group-flush">
+                    {% for equipment in room.equipment.all %}
+                    <li class="list-group-item">{{ equipment.name }} ({{ equipment.get_equipment_type_display }})</li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Booking Form Section -->
+    <div class="col-md-7">
+        <div class="card shadow-sm">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">Book This Room</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" class="needs-validation" novalidate>
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="id_title" class="form-label">Event Title</label>
+                        {{ form.title }}
+                        {% if form.title.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.title.errors }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="id_description" class="form-label">Event Description</label>
+                        {{ form.description }}
+                        {% if form.description.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.description.errors }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="id_start_time" class="form-label">Start Time</label>
+                            {{ form.start_time }}
+                            {% if form.start_time.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.start_time.errors }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label for="id_end_time" class="form-label">End Time</label>
+                            {{ form.end_time }}
+                            {% if form.end_time.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.end_time.errors }}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="id_organization" class="form-label">Organization (Optional)</label>
+                        {{ form.organization }}
+                        {% if form.organization.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.organization.errors }}
+                        </div>
+                        {% endif %}
+                        <div class="form-text">
+                            Select an organization if this booking is for a club or department event.
+                        </div>
+                    </div>
+                    
+                    {% if form.equipment %}
+                    <div class="mb-3">
+                        <label class="form-label">Additional Equipment</label>
+                        <div class="card">
+                            <div class="card-body">
+                                {{ form.equipment }}
+                                {% if form.equipment.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.equipment.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {{ form.non_field_errors }}
+                    </div>
+                    {% endif %}
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-success">Submit Booking Request</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Existing Bookings Section -->
+        <div class="card shadow-sm mt-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">Upcoming Bookings for This Room</h5>
+            </div>
+            <div class="card-body">
+                {% if approved_bookings %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Time</th>
+                                <th>Event</th>
+                                <th>Booked By</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for booking in approved_bookings %}
+                            <tr>
+                                <td>{{ booking.start_time|date:"M d, Y" }}</td>
+                                <td>{{ booking.start_time|time:"H:i" }} - {{ booking.end_time|time:"H:i" }}</td>
+                                <td>{{ booking.title }}</td>
+                                <td>{{ booking.user.get_full_name|default:booking.user.username }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-center text-muted my-3">No upcoming bookings for this room.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Add Bootstrap classes to form elements
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('select').forEach(function(el) {
+            el.classList.add('form-select');
+        });
+        
+        document.querySelectorAll('input[type="text"], input[type="number"], input[type="datetime-local"]').forEach(function(el) {
+            el.classList.add('form-control');
+        });
+        
+        document.querySelectorAll('textarea').forEach(function(el) {
+            el.classList.add('form-control');
+        });
+        
+        // Add custom class for checkboxes
+        document.querySelectorAll('input[type="checkbox"]').forEach(function(el) {
+            el.classList.add('form-check-input');
+            // Wrap checkbox in a div for better styling
+            if (!el.parentNode.classList.contains('form-check')) {
+                var wrapper = document.createElement('div');
+                wrapper.classList.add('form-check');
+                el.parentNode.insertBefore(wrapper, el);
+                wrapper.appendChild(el);
+            }
+        });
+    });
+</script>
+{% endblock %}
