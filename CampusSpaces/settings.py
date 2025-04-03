@@ -77,7 +77,8 @@ WSGI_APPLICATION = 'CampusSpaces.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
-DATABASE_URL = config('DATABASE_URL')
+
+DATABASE_URL = config("DATABASE_URL", default="")
 DATABASES = {
     'default': dj_database_url.parse(DATABASE_URL, conn_max_age=600)
 }
