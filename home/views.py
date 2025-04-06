@@ -413,7 +413,7 @@ def approve_booking(request, booking_id):
                     '''
                     
                     # In a production environment, uncomment this to send actual emails
-                    # send_mail(email_subject, email_message, settings.DEFAULT_FROM_EMAIL, [hr_email])
+                    send_mail(email_subject, email_message, settings.DEFAULT_FROM_EMAIL, [hr_email])
                 
                 messages.success(request, 'Booking approved successfully!')
             
