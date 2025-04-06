@@ -137,6 +137,7 @@ class Booking(models.Model):
     """Booking model for room and equipment reservations"""
     BOOKING_STATUS = [
         ('PENDING', 'Pending Approval'),
+        ('FACULTY_APPROVED', 'Faculty Approved'),  # New status for faculty approval stage
         ('APPROVED', 'Approved'),
         ('REJECTED', 'Rejected'),
         ('CANCELLED', 'Cancelled'),
@@ -154,6 +155,7 @@ class Booking(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     approved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_bookings')
+    faculty_approved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='faculty_approved_bookings')  # Faculty who approved first stage
     rejected_reason = models.TextField(blank=True, null=True)
     
     def __str__(self):
@@ -169,6 +171,32 @@ class Booking(models.Model):
         ).exclude(id=self.id)
         
         return conflicting_bookings.exists()
+    
+    def needs_faculty_approval(self):
+        """Check if this booking requires faculty approval first"""
+        # Only student bookings for organizations need faculty approval
+        return (self.organization is not None and 
+                self.status == 'PENDING' and 
+                hasattr(self.user, 'profile') and 
+                self.user.profile.role == 'STUDENT')
+    
+    def can_skip_faculty_approval(self):
+        """Check if this booking can skip faculty approval"""
+        # Faculty members can skip faculty approval for organization bookings
+        return (self.organization is not None and 
+                hasattr(self.user, 'profile') and 
+                self.user.profile.role == 'FACULTY')
+    
+    def needs_admin_approval(self):
+        """Check if this booking requires admin approval"""
+        # Personal bookings and faculty-approved org bookings need admin approval
+        if self.organization is None:
+            # Personal bookings need direct admin approval
+            return self.status == 'PENDING'
+        else:
+            # Organization bookings need admin approval after faculty approval
+            # or directly if booked by faculty
+            return self.status == 'FACULTY_APPROVED' or self.can_skip_faculty_approval()
 
 class BookingEquipment(models.Model):
     """Many-to-many relationship between bookings and equipment"""
@@ -186,6 +214,7 @@ class Notification(models.Model):
     """Notification model for system notifications"""
     NOTIFICATION_TYPES = [
         ('BOOKING_CREATED', 'Booking Created'),
+        ('BOOKING_FACULTY_APPROVED', 'Booking Approved by Faculty'),  # New notification type
         ('BOOKING_APPROVED', 'Booking Approved'),
         ('BOOKING_REJECTED', 'Booking Rejected'),
         ('BOOKING_CANCELLED', 'Booking Cancelled'),
@@ -196,7 +225,7 @@ class Notification(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
     title = models.CharField(max_length=100)
     message = models.TextField()
-    notification_type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES)
+    notification_type = models.CharField(max_length=50, choices=NOTIFICATION_TYPES)
     created_at = models.DateTimeField(auto_now_add=True)
     read = models.BooleanField(default=False)
     booking = models.ForeignKey(Booking, on_delete=models.CASCADE, null=True, blank=True)

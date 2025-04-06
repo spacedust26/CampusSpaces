@@ -51,7 +51,6 @@ def register(request):
             user = form.save()
             messages.success(request, 'Registration successful! You can now log in.')
             return redirect('index')
-        # Remove the else block and directly render the form with errors
     else:
         form = UserRegistrationForm()
     
@@ -76,17 +75,27 @@ def dashboard(request):
     
     # Get pending bookings that need approval (for faculty and admin)
     pending_approvals = []
-    if hasattr(request.user, 'profile') and request.user.profile.role in ['FACULTY', 'ADMIN']:
-        # For faculty, show bookings from their organizations
+    if hasattr(request.user, 'profile'):
+        # For faculty, show first-stage org bookings from their organizations (from students only)
         if request.user.profile.role == 'FACULTY':
             user_orgs = request.user.profile.organizations.all()
             pending_approvals = Booking.objects.filter(
                 organization__in=user_orgs,
                 status='PENDING'
+            ).exclude(
+                # Exclude bookings created by faculty members since they skip faculty approval
+                user__profile__role='FACULTY'
             ).order_by('start_time')
-        # For admin, show all pending bookings
+            
+        # For admin, show all bookings waiting for admin approval:
+        # 1. Personal bookings (PENDING)
+        # 2. Org bookings that passed faculty approval (FACULTY_APPROVED)
+        # 3. Org bookings created by faculty (FACULTY_APPROVED, faculty self-approved)
         elif request.user.profile.role == 'ADMIN':
-            pending_approvals = Booking.objects.filter(status='PENDING').order_by('start_time')
+            pending_approvals = Booking.objects.filter(
+                Q(organization__isnull=True, status='PENDING') |  # Personal bookings
+                Q(status='FACULTY_APPROVED')                      # Org bookings after faculty approval or by faculty
+            ).order_by('start_time')
     
     # Get recent notifications
     notifications = Notification.objects.filter(
@@ -196,7 +205,18 @@ def room_detail(request, room_id):
             booking = form.save(commit=False)
             booking.user = request.user
             booking.room = room
-            booking.status = 'PENDING'
+            
+            # Set initial booking status based on user role and booking type
+            user_is_faculty = hasattr(request.user, 'profile') and request.user.profile.role == 'FACULTY'
+            
+            if booking.organization and user_is_faculty:
+                # Faculty booking for organization - skip faculty approval
+                booking.status = 'FACULTY_APPROVED'
+                booking.faculty_approved_by = request.user
+            else:
+                # Student booking or personal booking - needs regular approval flow
+                booking.status = 'PENDING'
+                
             booking.save()
             
             # Add selected equipment to the booking
@@ -217,19 +237,44 @@ def room_detail(request, room_id):
                 booking=booking
             )
             
-            # If the booking has an organization, notify faculty members
+            # Route notifications based on booking type and user role
             if booking.organization:
-                # Get faculty members of the organization
-                faculty_profiles = UserProfile.objects.filter(
-                    role='FACULTY',
-                    organizations=booking.organization
-                )
+                if user_is_faculty:
+                    # Faculty booking for organization - notify admins directly
+                    admin_profiles = UserProfile.objects.filter(role='ADMIN')
+                    
+                    for profile in admin_profiles:
+                        Notification.objects.create(
+                            user=profile.user,
+                            title='Faculty Organization Booking',
+                            message=f'A faculty member ({request.user.username}) has made a booking request for {room.name} for {booking.organization.name} and needs your approval.',
+                            notification_type='BOOKING_FACULTY_APPROVED',
+                            booking=booking
+                        )
+                else:
+                    # Student booking for organization - notify faculty first
+                    faculty_profiles = UserProfile.objects.filter(
+                        role='FACULTY',
+                        organizations=booking.organization
+                    )
+                    
+                    for profile in faculty_profiles:
+                        Notification.objects.create(
+                            user=profile.user,
+                            title='Student Organization Booking Request',
+                            message=f'A student ({request.user.username}) has submitted a booking request for {room.name} for {booking.organization.name} that needs your approval first.',
+                            notification_type='BOOKING_CREATED',
+                            booking=booking
+                        )
+            else:
+                # Personal booking - notify admins directly
+                admin_profiles = UserProfile.objects.filter(role='ADMIN')
                 
-                for profile in faculty_profiles:
+                for profile in admin_profiles:
                     Notification.objects.create(
                         user=profile.user,
-                        title='New Booking Request',
-                        message=f'A new booking request for {room.name} has been submitted by {request.user.username} and needs your approval.',
+                        title='Personal Booking Request',
+                        message=f'A personal booking request for {room.name} has been submitted by {request.user.username} and needs your approval.',
                         notification_type='BOOKING_CREATED',
                         booking=booking
                     )
@@ -300,7 +345,7 @@ def cancel_booking(request, booking_id):
     """Cancel a booking"""
     booking = get_object_or_404(Booking, id=booking_id, user=request.user)
     
-    if booking.status in ['PENDING', 'APPROVED']:
+    if booking.status in ['PENDING', 'FACULTY_APPROVED', 'APPROVED']:
         booking.status = 'CANCELLED'
         booking.save()
         
@@ -322,18 +367,30 @@ def cancel_booking(request, booking_id):
 @login_required
 def approve_booking(request, booking_id):
     """Approve or reject a booking request"""
-    booking = get_object_or_404(Booking, id=booking_id, status='PENDING')
+    booking = get_object_or_404(Booking, id=booking_id)
     
-    # Check if user has permission to approve (faculty for their org or admin)
+    # Only process pending or faculty_approved bookings
+    if booking.status not in ['PENDING', 'FACULTY_APPROVED']:
+        messages.error(request, 'This booking is not awaiting approval.')
+        return redirect('dashboard')
+    
+    # Check if user has permission to approve
     user_profile = request.user.profile
     has_permission = False
     
-    if user_profile.role == 'ADMIN':
-        has_permission = True
-    elif user_profile.role == 'FACULTY' and booking.organization:
-        # Check if faculty is part of the organization
-        faculty_orgs = user_profile.organizations.all()
-        has_permission = booking.organization in faculty_orgs
+    # Determine appropriate permissions based on booking type and status
+    if booking.organization:
+        # Organization booking
+        if booking.status == 'PENDING' and user_profile.role == 'FACULTY':
+            # Faculty can approve first stage of student org bookings if they're in the same org
+            faculty_orgs = user_profile.organizations.all()
+            has_permission = booking.organization in faculty_orgs
+        elif booking.status == 'FACULTY_APPROVED' and user_profile.role == 'ADMIN':
+            # Admin can approve second stage (after faculty or faculty self-approval)
+            has_permission = True
+    else:
+        # Personal booking - only admin can approve
+        has_permission = user_profile.role == 'ADMIN'
     
     if not has_permission:
         messages.error(request, 'You do not have permission to approve this booking.')
@@ -362,7 +419,6 @@ def approve_booking(request, booking_id):
                         conflict_resolved = True
                     else:
                         # Check organization level/seniority
-                        # This is a simplified version - in a real system, you'd have more complex logic
                         booking_org_level = UserOrganization.objects.filter(
                             user__user=booking.user,
                             organization=booking.organization
@@ -375,47 +431,76 @@ def approve_booking(request, booking_id):
                         messages.error(request, 'There is a booking conflict that could not be resolved automatically.')
                         return redirect('booking_approval_detail', booking_id=booking.id)
                 
-                # Approve the booking
-                booking.status = 'APPROVED'
-                booking.approved_by = request.user
-                booking.save()
+                # Process approval based on booking type and user role
+                if booking.organization and booking.status == 'PENDING' and user_profile.role == 'FACULTY':
+                    # Faculty approving student's organization booking
+                    booking.status = 'FACULTY_APPROVED'
+                    booking.faculty_approved_by = request.user
+                    booking.save()
+                    
+                    # Notify the user
+                    Notification.objects.create(
+                        user=booking.user,
+                        title='Booking Approved by Faculty',
+                        message=f'Your booking request for {booking.room.name} has been approved by faculty and is now awaiting final admin approval.',
+                        notification_type='BOOKING_FACULTY_APPROVED',
+                        booking=booking
+                    )
+                    
+                    # Notify admins for final approval
+                    admin_profiles = UserProfile.objects.filter(role='ADMIN')
+                    for profile in admin_profiles:
+                        Notification.objects.create(
+                            user=profile.user,
+                            title='Booking Needs Final Approval',
+                            message=f'A booking request for {booking.room.name} by {booking.user.username} for {booking.organization.name} has been approved by faculty and needs your final approval.',
+                            notification_type='BOOKING_FACULTY_APPROVED',
+                            booking=booking
+                        )
+                    
+                    messages.success(request, 'Organization booking approved by faculty. It now needs admin approval.')
                 
-                # Notify the user
-                Notification.objects.create(
-                    user=booking.user,
-                    title='Booking Approved',
-                    message=f'Your booking request for {booking.room.name} has been approved.',
-                    notification_type='BOOKING_APPROVED',
-                    booking=booking
-                )
-                
-                # Notify HR personnel responsible for the room
-                if booking.room.hr_responsible:
-                    # In a real system, you'd send an email here
-                    # For now, we'll just create a notification
-                    hr_email = booking.room.hr_responsible.email
-                    hr_name = booking.room.hr_responsible.name
-                    email_subject = f'Room Booking Notification: {booking.room.name}'
-                    email_message = f'''
-                    Dear {hr_name},
+                else:
+                    # Final approval (admin approving any booking)
+                    booking.status = 'APPROVED'
+                    booking.approved_by = request.user
+                    booking.save()
                     
-                    This is to inform you that room {booking.room.name} has been booked for the following period:
+                    # Notify the user
+                    Notification.objects.create(
+                        user=booking.user,
+                        title='Booking Approved',
+                        message=f'Your booking request for {booking.room.name} has been approved.',
+                        notification_type='BOOKING_APPROVED',
+                        booking=booking
+                    )
                     
-                    Event: {booking.title}
-                    Date: {booking.start_time.strftime('%Y-%m-%d')}
-                    Time: {booking.start_time.strftime('%H:%M')} - {booking.end_time.strftime('%H:%M')}
-                    Booked by: {booking.user.get_full_name() or booking.user.username}
+                    # Notify HR personnel responsible for the room
+                    if booking.room.hr_responsible:
+                        # Email notification
+                        hr_email = booking.room.hr_responsible.email
+                        hr_name = booking.room.hr_responsible.name
+                        email_subject = f'Room Booking Notification: {booking.room.name}'
+                        email_message = f'''
+                        Dear {hr_name},
+                        
+                        This is to inform you that room {booking.room.name} has been booked for the following period:
+                        
+                        Event: {booking.title}
+                        Date: {booking.start_time.strftime('%Y-%m-%d')}
+                        Time: {booking.start_time.strftime('%H:%M')} - {booking.end_time.strftime('%H:%M')}
+                        Booked by: {booking.user.get_full_name() or booking.user.username}
+                        
+                        Please ensure the room is prepared accordingly.
+                        
+                        Regards,
+                        CampusSpaces System
+                        '''
+                        
+                        # In a production environment, uncomment this to send actual emails
+                        send_mail(email_subject, email_message, settings.DEFAULT_FROM_EMAIL, [hr_email])
                     
-                    Please ensure the room is prepared accordingly.
-                    
-                    Regards,
-                    CampusSpaces System
-                    '''
-                    
-                    # In a production environment, uncomment this to send actual emails
-                    send_mail(email_subject, email_message, settings.DEFAULT_FROM_EMAIL, [hr_email])
-                
-                messages.success(request, 'Booking approved successfully!')
+                    messages.success(request, 'Booking approved successfully!')
             
             elif action == 'REJECT':
                 booking.status = 'REJECTED'
