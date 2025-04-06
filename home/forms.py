@@ -99,8 +99,6 @@ class BookingForm(forms.ModelForm):
             self.fields['organization'].queryset = user.profile.organizations.all()
 
 
-    # TODO start_time must be >= today's date
-    
     def clean(self):
         cleaned_data = super().clean()
         start_time = cleaned_data.get('start_time')
