@@ -97,6 +97,9 @@ class BookingForm(forms.ModelForm):
         if user and hasattr(user, 'profile'):
             # Filter organizations based on user's membership
             self.fields['organization'].queryset = user.profile.organizations.all()
+
+
+    # TODO start_time must be >= today's date
     
     def clean(self):
         cleaned_data = super().clean()
@@ -108,9 +111,9 @@ class BookingForm(forms.ModelForm):
                 raise forms.ValidationError("End time must be after start time.")
             
             # Check if booking duration is valid (e.g., hourly slots)
-            duration = end_time - start_time
-            if duration.total_seconds() % 3600 != 0:  # 3600 seconds = 1 hour
-                raise forms.ValidationError("Booking must be in hourly slots.")
+            # duration = end_time - start_time
+            # if duration.total_seconds() % 3600 != 0:  # 3600 seconds = 1 hour
+            #     raise forms.ValidationError("Booking must be in hourly slots.")
         
         return cleaned_data
 

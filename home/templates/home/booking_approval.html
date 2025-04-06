@@ -56,7 +56,7 @@
                     <li class="list-group-item">
                         {{ item.equipment.name }} ({{ item.equipment.get_equipment_type_display }})
                         {% if item.equipment.room %}
-                        <small class="text-muted">Room: {{ item.equipment.room.room_number }}</small>
+                        <small class="text-light">Room: {{ item.equipment.room.room_number }}</small>
                         {% endif %}
                     </li>
                     {% endfor %}
@@ -179,8 +179,8 @@
                     </div>
                     <div class="flex-grow-1 ms-3">
                         <h5 class="mb-0">{{ booking.user.get_full_name|default:booking.user.username }}</h5>
-                        <p class="text-muted mb-0">{{ booking.user.email }}</p>
-                        <p class="text-muted mb-0">{{ booking.user.profile.get_role_display }}</p>
+                        <p class="text-light mb-0">{{ booking.user.email }}</p>
+                        <p class="text-light mb-0">{{ booking.user.profile.get_role_display }}</p>
                     </div>
                 </div>
                 

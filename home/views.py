@@ -51,6 +51,7 @@ def register(request):
             user = form.save()
             messages.success(request, 'Registration successful! You can now log in.')
             return redirect('index')
+        # Remove the else block and directly render the form with errors
     else:
         form = UserRegistrationForm()
     
