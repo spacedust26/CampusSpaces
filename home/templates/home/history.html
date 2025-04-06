@@ -52,6 +52,9 @@
                                         <span class="badge bg-success">{{ booking.get_status_display }}</span>
                                     {% elif booking.status == 'PENDING' %}
                                         <span class="badge bg-warning text-dark">{{ booking.get_status_display }}</span>
+                                    {% elif booking.status == 'FACULTY_APPROVED' %}
+                                        <span class="badge bg-warning text-dark">{{ booking.get_status_display }}</span>
+                                    
                                     {% elif booking.status == 'REJECTED' %}
                                         <span class="badge bg-danger">{{ booking.get_status_display }}</span>
                                     {% elif booking.status == 'CANCELLED' %}
