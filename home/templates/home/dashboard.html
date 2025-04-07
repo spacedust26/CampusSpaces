@@ -180,7 +180,7 @@
             <div class="col-12">
                 {% for message in messages %}
                 <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                    {{ message }}
+                    {{ message.message }}
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
                 {% endfor %}
@@ -309,5 +309,103 @@
             document.getElementById('content').classList.toggle('collapsed');
         }
     </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+          // Get the datetime input elements
+          const startTimeInput = document.getElementById('id_start_time');
+          const endTimeInput = document.getElementById('id_end_time');
+          const bookingForm = document.getElementById('booking-form');
+          
+          // Function to set minimum datetime to current time
+          function updateMinDatetime() {
+            const now = new Date();
+            
+            // Format the current date and time in the ISO format (YYYY-MM-DDThh:mm)
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            
+            const minDatetime = `${year}-${month}-${day}T${hours}:${minutes}`;
+            
+            // Set the min attribute for start time
+            startTimeInput.setAttribute('min', minDatetime);
+            
+            // If startTimeInput has a value, use it for end min datetime
+            // Otherwise use current time
+            const endMinDatetime = startTimeInput.value || minDatetime;
+            endTimeInput.setAttribute('min', endMinDatetime);
+          }
+          
+          // Update min datetime initially
+          updateMinDatetime();
+          
+          // When start time changes, set end time min value to start time
+          startTimeInput.addEventListener('input', function() {
+            console.log("Start time changed:", startTimeInput.value);
+            if (startTimeInput.value) {
+              endTimeInput.setAttribute('min', startTimeInput.value);
+              
+              // If end time is before start time, reset it
+              if (endTimeInput.value && endTimeInput.value <= startTimeInput.value) {
+                // Set end time to start time + 1 hour
+                const startDate = new Date(startTimeInput.value);
+                startDate.setHours(startDate.getHours() + 1);
+                
+                const year = startDate.getFullYear();
+                const month = String(startDate.getMonth() + 1).padStart(2, '0');
+                const day = String(startDate.getDate()).padStart(2, '0');
+                const hours = String(startDate.getHours()).padStart(2, '0');
+                const minutes = String(startDate.getMinutes()).padStart(2, '0');
+                
+                endTimeInput.value = `${year}-${month}-${day}T${hours}:${minutes}`;
+              }
+            }
+          });
+          
+          // Add additional listeners for browser compatibility
+          startTimeInput.addEventListener('change', function() {
+            console.log("Start time change event:", startTimeInput.value);
+            if (startTimeInput.value) {
+              endTimeInput.setAttribute('min', startTimeInput.value);
+            }
+          });
+          
+          // Form validation
+          bookingForm.addEventListener('submit', function(event) {
+            let isValid = true;
+            const now = new Date();
+            
+            // Validate start time
+            const startTime = new Date(startTimeInput.value);
+            if (startTime <= now) {
+              isValid = false;
+              event.preventDefault();
+              alert('Booking start time must be in the future.');
+            }
+            
+            // Validate end time
+            const endTime = new Date(endTimeInput.value);
+            if (endTime <= startTime) {
+              isValid = false;
+              event.preventDefault();
+              alert('End time must be after start time.');
+            }
+            
+            // Validate booking duration (max 8 hours)
+            const maxDuration = 8 * 60 * 60 * 1000; // 8 hours in milliseconds
+            if ((endTime - startTime) > maxDuration) {
+              isValid = false;
+              event.preventDefault();
+              alert('Booking duration cannot exceed 8 hours.');
+            }
+            
+            return isValid;
+          });
+        });
+      </script>
+      
+
 </body>
 </html>

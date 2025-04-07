@@ -40,7 +40,7 @@
 
           {% if messages %}
             {% for message in messages %}
-              <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+              <div class="alert alert-{{ message.tags }}">{{ message.message }}</div>
             {% endfor %}
           {% endif %}
 
@@ -115,6 +115,37 @@
               </div>
             </div>
 
+            <!-- New organization and role fields -->
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <label for="id_organization" class="form-label">Organization</label>
+                <select name="organization" class="form-select {% if form.organization.errors %}is-invalid{% endif %}" id="id_organization">
+                  <option value="">Select an organization</option>
+                  {% for org in organizations %}
+                    <option value="{{ org.id }}" {% if form.organization.value == org.id %}selected{% endif %}>{{ org.name }} ({{ org.get_type_display }})</option>
+                  {% endfor %}
+                </select>
+                {% for error in form.organization.errors %}
+                  <div class="invalid-feedback">{{ error }}</div>
+                {% endfor %}
+                <div class="form-text">Select your organization if applicable.</div>
+              </div>
+
+              <div class="col-md-6">
+                <label for="id_organization_role" class="form-label">Organization Role</label>
+                <select name="organization_role" class="form-select {% if form.organization_role.errors %}is-invalid{% endif %}" id="id_organization_role">
+                  <option value="">Select your role in the organization</option>
+                  <option value="1" {% if form.organization_role.value == "1" %}selected{% endif %}>Member</option>
+                  <option value="2" {% if form.organization_role.value == "2" %}selected{% endif %}>Representative</option>
+                  <option value="3" {% if form.organization_role.value == "3" %}selected{% endif %}>Leader</option>
+                </select>
+                {% for error in form.organization_role.errors %}
+                  <div class="invalid-feedback">{{ error }}</div>
+                {% endfor %}
+                <div class="form-text">Select your role in the organization if applicable.</div>
+              </div>
+            </div>
+
             <div class="row mb-3">
               <div class="col-md-6">
                 <label for="id_password1" class="form-label">Password</label>
@@ -164,6 +195,32 @@
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+
+<!-- Script to handle organization field dependency -->
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const orgField = document.getElementById('id_organization');
+    const roleField = document.getElementById('id_organization_role');
+    
+    // Function to toggle organization role field based on organization selection
+    function toggleOrgRole() {
+      if (orgField.value) {
+        roleField.removeAttribute('disabled');
+        roleField.required = true;
+      } else {
+        roleField.setAttribute('disabled', 'disabled');
+        roleField.value = '';
+        roleField.required = false;
+      }
+    }
+    
+    // Initial state
+    toggleOrgRole();
+    
+    // Add event listener
+    orgField.addEventListener('change', toggleOrgRole);
+  });
+</script>
 
 </body>
 </html>
