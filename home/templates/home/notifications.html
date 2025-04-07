@@ -49,66 +49,6 @@
                             </small>
                             {% if notification.booking %}
                             <a href="#" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#bookingModal{{ notification.booking.id }}">View Booking</a>
-                            
-                            <!-- Booking Details Modal -->
-                            <div class="modal fade" id="bookingModal{{ notification.booking.id }}" tabindex="-1" aria-labelledby="bookingModalLabel{{ notification.booking.id }}" aria-hidden="true">
-                                <div class="modal-dialog modal-lg">
-                                    <div class="modal-content">
-                                        <div class="modal-header">
-                                            <h5 class="modal-title" id="bookingModalLabel{{ notification.booking.id }}">Booking Details</h5>
-                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                        </div>
-                                        <div class="modal-body">
-                                            <div class="row">
-                                                <div class="col-md-6">
-                                                    <h6>Event Information</h6>
-                                                    <ul class="list-group list-group-flush mb-3">
-                                                        <li class="list-group-item"><strong>Title:</strong> {{ notification.booking.title }}</li>
-                                                        <li class="list-group-item"><strong>Description:</strong> {{ notification.booking.description|default:"No description provided." }}</li>
-                                                        <li class="list-group-item"><strong>Date:</strong> {{ notification.booking.start_time|date:"M d, Y" }}</li>
-                                                        <li class="list-group-item"><strong>Time:</strong> {{ notification.booking.start_time|time:"H:i" }} - {{ notification.booking.end_time|time:"H:i" }}</li>
-                                                        {% if notification.booking.organization %}
-                                                        <li class="list-group-item"><strong>Organization:</strong> {{ notification.booking.organization.name }}</li>
-                                                        {% endif %}
-                                                        <li class="list-group-item"><strong>Status:</strong> 
-                                                            {% if notification.booking.status == 'APPROVED' %}
-                                                                <span class="badge bg-success">{{ notification.booking.get_status_display }}</span>
-                                                            {% elif notification.booking.status == 'PENDING' %}
-                                                                <span class="badge bg-warning text-dark">{{ notification.booking.get_status_display }}</span>
-                                                            {% elif notification.booking.status == 'REJECTED' %}
-                                                                <span class="badge bg-danger">{{ notification.booking.get_status_display }}</span>
-                                                                {% if notification.booking.rejected_reason %}
-                                                                <br><small class="text-danger">Reason: {{ notification.booking.rejected_reason }}</small>
-                                                                {% endif %}
-                                                            {% elif notification.booking.status == 'CANCELLED' %}
-                                                                <span class="badge bg-secondary">{{ notification.booking.get_status_display }}</span>
-                                                            {% elif notification.booking.status == 'COMPLETED' %}
-                                                                <span class="badge bg-info">{{ notification.booking.get_status_display }}</span>
-                                                            {% endif %}
-                                                        </li>
-                                                    </ul>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <h6>Room Information</h6>
-                                                    <ul class="list-group list-group-flush mb-3">
-                                                        <li class="list-group-item"><strong>Room:</strong> {{ notification.booking.room.name }}</li>
-                                                        <li class="list-group-item"><strong>Building:</strong> {{ notification.booking.room.building.name }}</li>
-                                                        <li class="list-group-item"><strong>Room Number:</strong> {{ notification.booking.room.room_number }}</li>
-                                                        <li class="list-group-item"><strong>Capacity:</strong> {{ notification.booking.room.capacity }} people</li>
-                                                        <li class="list-group-item"><strong>Type:</strong> {{ notification.booking.room.get_room_type_display }}</li>
-                                                    </ul>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="modal-footer">
-                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                            {% if notification.booking.status == 'APPROVED' and notification.booking.end_time > now %}
-                                            <a href="{% url 'cancel_booking' notification.booking.id %}" class="btn btn-danger" onclick="return confirm('Are you sure you want to cancel this booking?')">Cancel Booking</a>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
                             {% endif %}
                         </div>
                     </div>
@@ -126,7 +66,70 @@
     </div>
 </div>
 
-{% comment "TODO change notification hover UI, FIX FLICKERING MODAL" %}{% endcomment %}
+<!-- Move all modals outside the list -->
+{% for notification in notifications %}
+    {% if notification.booking %}
+    <div class="modal fade" id="bookingModal{{ notification.booking.id }}" tabindex="-1" aria-labelledby="bookingModalLabel{{ notification.booking.id }}" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="bookingModalLabel{{ notification.booking.id }}">Booking Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Event Information</h6>
+                            <ul class="list-group list-group-flush mb-3">
+                                <li class="list-group-item"><strong>Title:</strong> {{ notification.booking.title }}</li>
+                                <li class="list-group-item"><strong>Description:</strong> {{ notification.booking.description|default:"No description provided." }}</li>
+                                <li class="list-group-item"><strong>Date:</strong> {{ notification.booking.start_time|date:"M d, Y" }}</li>
+                                <li class="list-group-item"><strong>Time:</strong> {{ notification.booking.start_time|time:"H:i" }} - {{ notification.booking.end_time|time:"H:i" }}</li>
+                                {% if notification.booking.organization %}
+                                <li class="list-group-item"><strong>Organization:</strong> {{ notification.booking.organization.name }}</li>
+                                {% endif %}
+                                <li class="list-group-item"><strong>Status:</strong> 
+                                    {% if notification.booking.status == 'APPROVED' %}
+                                        <span class="badge bg-success">{{ notification.booking.get_status_display }}</span>
+                                    {% elif notification.booking.status == 'PENDING' %}
+                                        <span class="badge bg-warning text-dark">{{ notification.booking.get_status_display }}</span>
+                                    {% elif notification.booking.status == 'REJECTED' %}
+                                        <span class="badge bg-danger">{{ notification.booking.get_status_display }}</span>
+                                        {% if notification.booking.rejected_reason %}
+                                        <br><small class="text-danger">Reason: {{ notification.booking.rejected_reason }}</small>
+                                        {% endif %}
+                                    {% elif notification.booking.status == 'CANCELLED' %}
+                                        <span class="badge bg-secondary">{{ notification.booking.get_status_display }}</span>
+                                    {% elif notification.booking.status == 'COMPLETED' %}
+                                        <span class="badge bg-info">{{ notification.booking.get_status_display }}</span>
+                                    {% endif %}
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Room Information</h6>
+                            <ul class="list-group list-group-flush mb-3">
+                                <li class="list-group-item"><strong>Room:</strong> {{ notification.booking.room.name }}</li>
+                                <li class="list-group-item"><strong>Building:</strong> {{ notification.booking.room.building.name }}</li>
+                                <li class="list-group-item"><strong>Room Number:</strong> {{ notification.booking.room.room_number }}</li>
+                                <li class="list-group-item"><strong>Capacity:</strong> {{ notification.booking.room.capacity }} people</li>
+                                <li class="list-group-item"><strong>Type:</strong> {{ notification.booking.room.get_room_type_display }}</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    {% if notification.booking.status == 'APPROVED' and notification.booking.end_time > now %}
+                    <a href="{% url 'cancel_booking' notification.booking.id %}" class="btn btn-danger" onclick="return confirm('Are you sure you want to cancel this booking?')">Cancel Booking</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+{% endfor %}
+
 <style>
     .notification-item {
         border-left: 4px solid #3e4a24;
@@ -141,5 +144,45 @@
         border-left: 4px solid #dc3545;
         background-color: rgba(220, 53, 69, 0.1);
     }
+    
+    /* Add these styles to prevent flickering */
+    .modal-backdrop {
+        opacity: 0.5 !important;
+    }
+    
+    .modal {
+        transition: none !important;
+    }
 </style>
+
+<!-- Add this script to properly handle modal events -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Prevent multiple backdrop issues
+        const modalBackdrop = document.querySelector('.modal-backdrop');
+        if (modalBackdrop) {
+            document.body.removeChild(modalBackdrop);
+        }
+        
+        // Properly initialize modals
+        const modals = document.querySelectorAll('.modal');
+        modals.forEach(function(modal) {
+            modal.addEventListener('shown.bs.modal', function() {
+                // Prevent scrolling of the background when modal is open
+                document.body.style.overflow = 'hidden';
+            });
+            
+            modal.addEventListener('hidden.bs.modal', function() {
+                // Re-enable scrolling when modal is closed
+                document.body.style.overflow = '';
+                
+                // Remove any lingering backdrops
+                const backdrops = document.querySelectorAll('.modal-backdrop');
+                backdrops.forEach(function(backdrop) {
+                    backdrop.remove();
+                });
+            });
+        });
+    });
+</script>
 {% endblock %}
