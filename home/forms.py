@@ -1,7 +1,8 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
-from .models import Booking, BookingEquipment, UserProfile, Organization, Room, Equipment, Building
+from .models import Booking, BookingEquipment, UserProfile, Organization, Room, Equipment, Building, UserOrganization
+from django.utils import timezone
 
 class UserRegistrationForm(UserCreationForm):
     email = forms.EmailField(required=True)
@@ -14,6 +15,16 @@ class UserRegistrationForm(UserCreationForm):
         ('FACULTY', 'Faculty'),
     ]
     role = forms.ChoiceField(choices=ROLES, required=True)
+    organization = forms.ModelChoiceField(
+        queryset=Organization.objects.all(),
+        required=False,
+        help_text="Select your organization"
+    )
+    organization_role = forms.ChoiceField(
+        choices=UserOrganization.LEVELS,
+        required=False,
+        help_text="Your role within the organization"
+    )
     
     class Meta:
         model = User
@@ -28,11 +39,21 @@ class UserRegistrationForm(UserCreationForm):
         if commit:
             user.save()
             # Create user profile
-            UserProfile.objects.create(
+            profile = UserProfile.objects.create(
                 user=user,
                 role=self.cleaned_data['role'],
                 phone=self.cleaned_data['phone']
             )
+            
+            # Add user to selected organization if provided
+            organization = self.cleaned_data.get('organization')
+            organization_role = self.cleaned_data.get('organization_role')
+            if organization and organization_role:
+                UserOrganization.objects.create(
+                    user=profile,
+                    organization=organization,
+                    level=organization_role
+                )
         
         return user
 
@@ -72,10 +93,30 @@ class EquipmentFilterForm(forms.Form):
     )
 
 class BookingForm(forms.ModelForm):
-    organization = forms.ModelChoiceField(
-        queryset=Organization.objects.all(),
-        required=False
+    """Form for creating room bookings"""
+    
+    # Add a datetime widget with min set to current date
+    start_time = forms.DateTimeField(
+        widget=forms.DateTimeInput(
+            attrs={
+                'type': 'datetime-local',
+                'min': timezone.now().strftime('%Y-%m-%dT%H:%M'),
+                'class': 'form-control',
+            }
+        )
     )
+    
+    end_time = forms.DateTimeField(
+        widget=forms.DateTimeInput(
+            attrs={
+                'type': 'datetime-local',
+                'min': timezone.now().strftime('%Y-%m-%dT%H:%M'),
+                'class': 'form-control'
+            }
+        )
+    )
+    
+    # Equipment field for selecting multiple equipment
     equipment = forms.ModelMultipleChoiceField(
         queryset=Equipment.objects.filter(status='AVAILABLE'),
         required=False,
@@ -84,34 +125,53 @@ class BookingForm(forms.ModelForm):
     
     class Meta:
         model = Booking
-        fields = ['title', 'description', 'organization', 'start_time', 'end_time']
+        fields = ['title', 'description', 'start_time', 'end_time', 'organization']
         widgets = {
-            'start_time': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
-            'end_time': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
+            'title': forms.TextInput(attrs={'class': 'form-control'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'organization': forms.Select(attrs={'class': 'form-select'}),
         }
     
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
         
-        if user and hasattr(user, 'profile'):
-            # Filter organizations based on user's membership
-            self.fields['organization'].queryset = user.profile.organizations.all()
+        # Set minimum date and time for datetime fields
+        min_datetime = timezone.now().strftime('%Y-%m-%dT%H:%M')
+        self.fields['start_time'].widget.attrs['min'] = min_datetime
+        self.fields['end_time'].widget.attrs['min'] = min_datetime
+        
 
-
+        
+        # Only show organizations that the user belongs to
+        if user:
+            if hasattr(user, 'profile'):
+                self.fields['organization'].queryset = user.profile.organizations.all()
+                
+                # If user is not in any organization, remove the field
+                if not user.profile.organizations.exists():
+                    self.fields['organization'].widget = forms.HiddenInput()
+                    self.fields['organization'].required = False
+    
     def clean(self):
         cleaned_data = super().clean()
         start_time = cleaned_data.get('start_time')
         end_time = cleaned_data.get('end_time')
         
+        # Validate that start_time is in the future
+        if start_time and start_time < timezone.now():
+            self.add_error('start_time', 'Booking must start in the future.')
+        
+        # Validate that end_time is after start_time
+        if start_time and end_time and end_time <= start_time:
+            self.add_error('end_time', 'End time must be after start time.')
+        
+        # Validate that booking duration is not too long (e.g., 8 hours max)
         if start_time and end_time:
-            if start_time >= end_time:
-                raise forms.ValidationError("End time must be after start time.")
-            
-            # Check if booking duration is valid (e.g., hourly slots)
-            # duration = end_time - start_time
-            # if duration.total_seconds() % 3600 != 0:  # 3600 seconds = 1 hour
-            #     raise forms.ValidationError("Booking must be in hourly slots.")
+            duration = end_time - start_time
+            max_duration = timezone.timedelta(hours=8)
+            if duration > max_duration:
+                self.add_error('end_time', 'Booking duration cannot exceed 8 hours.')
         
         return cleaned_data
 
