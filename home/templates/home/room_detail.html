@@ -129,15 +129,26 @@
               </div>
             </div>
             
-            {% if not form.organization.is_hidden %}
-              <div class="mb-3">
-                <label for="{{ form.organization.id_for_label }}" class="form-label">Organization</label>
-                {{ form.organization }}
-                {% if form.organization.errors %}
-                  <div class="invalid-feedback d-block">{{ form.organization.errors }}</div>
-                {% endif %}
-               
+            {% if user.profile.organizations.exists %}
+            <div class="mb-3">
+              <label for="{{ form.organization.id_for_label }}" class="form-label">Organization</label>
+              {{ form.organization }}
+              {% if form.organization.help_text %}
+              <div class="form-text">{{ form.organization.help_text }}</div>
+              {% endif %}
+              {% if form.organization.errors %}
+              <div class="text-danger">{{ form.organization.errors }}</div>
+              {% endif %}
+            </div>
+            {% else %}
+              {% if user.profile.role == 'STUDENT' %}
+              <div class="alert alert-warning">
+                You are not part of any organization. Students must be part of an organization to book rooms.
               </div>
+              {% else %}
+              <input type="hidden" name="organization" value="">
+              <p class="text-muted">You're not part of any organization. This will be booked as a personal reservation.</p>
+              {% endif %}
             {% endif %}
             
             <!-- Equipment Selection -->
