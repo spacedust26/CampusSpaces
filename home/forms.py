@@ -185,6 +185,11 @@ class BookingApprovalForm(forms.Form):
         widget=forms.Textarea,
         required=False
     )
+    override_conflicts = forms.BooleanField(
+        required=False,
+        label="Override conflicting bookings",
+        help_text="Checking this will cancel any existing bookings that conflict with this one."
+    )
     
     def clean(self):
         cleaned_data = super().clean()
