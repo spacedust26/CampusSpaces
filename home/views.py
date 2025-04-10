@@ -41,16 +41,94 @@ def index(request):
     return render(request, 'home/index.html', {'form': form})
 
 def register(request):
-    """User registration page"""
-    if request.user.is_authenticated:
+    """
+    User registration page - admin only access.
+    Allows administrators to create new user accounts.
+    """
+    # Check if user is authenticated
+    if not request.user.is_authenticated:
+        messages.error(request, 'You must be logged in as an admin to register new users.')
+        return redirect('index')
+    
+    # Check if user is an admin
+    if not hasattr(request.user, 'profile') or request.user.profile.role != 'ADMIN':
+        messages.error(request, 'Only administrators can register new users.')
         return redirect('dashboard')
     
     if request.method == 'POST':
         form = UserRegistrationForm(request.POST)
         if form.is_valid():
-            user = form.save()
-            messages.success(request, 'Registration successful! You can now log in.')
-            return redirect('index')
+            # Save the user but don't commit yet
+            user = form.save(commit=False)
+            
+            # Get the password for sending in email
+            raw_password = form.cleaned_data.get('password1')
+            
+            # Save the user
+            user.save()
+            
+            # Create or update the user profile
+            if hasattr(user, 'profile'):
+                profile = user.profile
+            else:
+                profile = UserProfile(user=user)
+            
+            profile.role = form.cleaned_data['role']
+            profile.save()
+            
+            # Process the selected organization IDs
+            selected_org_ids = form.cleaned_data.get('organization_ids', [])
+            
+           
+            
+            if selected_org_ids:
+                # Get organizations by their IDs
+                for org_id in selected_org_ids:
+                    try:
+                        # Get the organization by ID
+                        org = Organization.objects.get(id=org_id)
+                        
+                        # Create the UserOrganization relationship
+                        user_org = UserOrganization.objects.create(
+                            user=profile,
+                            organization=org,
+                            level=1  # Default level is 1 (Member)
+                        )
+                        messages.info(request, f"Created UserOrganization: {user_org.id} for {org.name}")
+                    except Organization.DoesNotExist:
+                        messages.warning(request, f"Organization with ID {org_id} does not exist")
+                    except Exception as e:
+                        messages.warning(request, f"Error adding organization {org_id}: {str(e)}")
+            
+            
+            # Send email with login credentials
+            email_subject = 'Your CampusSpaces Account Has Been Created'
+            email_message = f"""
+Hello {user.first_name},
+
+An account has been created for you on CampusSpaces.
+
+Here are your login credentials:
+Email: {user.email}
+Username: {user.username}
+Password: {raw_password}
+
+Please login at: {request.build_absolute_uri('/')[:-1]}
+
+Regards,
+CampusSpaces Administration
+"""
+            
+            send_mail(
+                email_subject,
+                email_message,
+                settings.DEFAULT_FROM_EMAIL,
+                [user.email],
+                fail_silently=False,
+            )
+            
+            messages.success(request, f'User account for {user.username} created successfully. Login credentials have been sent to {user.email}.')
+            return redirect('dashboard')
     else:
         form = UserRegistrationForm()
     
@@ -204,6 +282,20 @@ def room_detail(request, room_id):
     """View details of a specific room and book it"""
     room = get_object_or_404(Room, id=room_id, status='AVAILABLE')
     
+    # Check if user has a profile
+    if not hasattr(request.user, 'profile'):
+        messages.error(request, "Your user profile is incomplete. Please contact an administrator.")
+        return redirect('view_space')
+    
+    # Get user's organizations
+    user_organizations = request.user.profile.organizations.all()
+    
+    # For students, require an organization
+    user_is_student = request.user.profile.role == 'STUDENT'
+    if user_is_student and not user_organizations.exists():
+        messages.warning(request, "As a student, you need to be part of an organization to book rooms. Please contact an administrator.")
+        return redirect('view_space')
+    
     if request.method == 'POST':
         form = BookingForm(request.POST, user=request.user)
         if form.is_valid():
@@ -212,23 +304,31 @@ def room_detail(request, room_id):
             booking.room = room
             
             # Set initial booking status based on user role and booking type
-            user_is_faculty = hasattr(request.user, 'profile') and request.user.profile.role == 'FACULTY'
-            user_is_student = hasattr(request.user, 'profile') and request.user.profile.role == 'STUDENT'
+            user_is_faculty = request.user.profile.role == 'FACULTY'
+            
+            # Students must book through an organization
             if user_is_student and not booking.organization:
-                # student cant book without organization
-                return render(request, 'home/room_detail.html', {'room': room, 'form': form, 'messages':[
-                    {
-                        'tags': 'danger',
-                        'message': 'You must select an organization to book a room.'
-                    }
-                ]})
+                messages.error(request, 'As a student, you must select an organization to book a room.')
+                return render(request, 'home/room_detail.html', {'room': room, 'form': form, 'user_organizations': user_organizations})
+            
+            # Check for conflicts before deciding approval flow
+            conflicts_exist = Booking.objects.filter(
+                room=room,
+                status__in=['APPROVED', 'FACULTY_APPROVED'],
+                start_time__lt=booking.end_time,
+                end_time__gt=booking.start_time
+            ).exists()
             
             if booking.organization and user_is_faculty:
                 # Faculty booking for organization - skip faculty approval
                 booking.status = 'FACULTY_APPROVED'
                 booking.faculty_approved_by = request.user
+            elif booking.organization and user_is_student and conflicts_exist:
+                # Student booking with conflicts - skip faculty approval and go directly to admin
+                booking.status = 'FACULTY_APPROVED'
+                booking.faculty_approved_by = None  # No faculty approval happened
             else:
-                # Student booking or personal booking - needs regular approval flow
+                # Regular flow for student organization or personal booking
                 booking.status = 'PENDING'
                 
             booking.save()
@@ -251,22 +351,31 @@ def room_detail(request, room_id):
                 booking=booking
             )
             
-            # Route notifications based on booking type and user role
-            if booking.organization:
-                if user_is_faculty:
-                    # Faculty booking for organization - notify admins directly
+            # Create notifications based on booking type
+            if booking.organization and user_is_student:
+                if conflicts_exist:
+                    # Notify admins directly about student booking with conflicts
                     admin_profiles = UserProfile.objects.filter(role='ADMIN')
                     
                     for profile in admin_profiles:
                         Notification.objects.create(
                             user=profile.user,
-                            title='Faculty Organization Booking',
-                            message=f'A faculty member ({request.user.username}) has made a booking request for {room.name} for {booking.organization.name} and needs your approval.',
-                            notification_type='BOOKING_FACULTY_APPROVED',
+                            title='Conflicting Student Booking Request',
+                            message=f'A student ({request.user.username}) has submitted a booking request for {room.name} that has scheduling conflicts and requires your immediate review.',
+                            notification_type='BOOKING_FACULTY_APPROVED',  # Using this type to show in admin queue
                             booking=booking
                         )
+                    
+                    # Notify the student about direct admin review
+                    Notification.objects.create(
+                        user=request.user,
+                        title='Booking Request Sent for Admin Review',
+                        message=f'Your booking request for {room.name} has scheduling conflicts and has been sent directly to administrators for review, bypassing faculty approval.',
+                        notification_type='BOOKING_CREATED',
+                        booking=booking
+                    )
                 else:
-                    # Student booking for organization - notify faculty first
+                    # Regular flow - notify faculty first for non-conflicting student bookings
                     faculty_profiles = UserProfile.objects.filter(
                         role='FACULTY',
                         organizations=booking.organization
@@ -309,6 +418,7 @@ def room_detail(request, room_id):
         'room': room,
         'form': form,
         'approved_bookings': approved_bookings,
+        'user_organizations': user_organizations,
     }
     
     return render(request, 'home/room_detail.html', context)
@@ -374,14 +484,7 @@ def cancel_booking(request, booking_id):
         
         messages.success(request, 'Booking cancelled successfully!')
     else:
-        return render(request, 'home/history.html', {
-            'messages': [
-                {
-                    'tags': 'danger',
-                    'message': 'You cannot cancel this booking.'
-                }
-            ]
-        })
+        messages.error(request, 'You cannot cancel this booking.')
     
     return redirect('history')
 
@@ -431,54 +534,59 @@ def approve_booking(request, booking_id):
                     end_time__gt=booking.start_time
                 ).exclude(id=booking.id)
                 
-                # Handle conflicts based on user role and booking importance
+                # Debug information
+                if conflicting_bookings.exists():
+                    messages.info(request, f"Found {conflicting_bookings.count()} conflicting bookings.")
+                
+                # Handle conflicts if they exist
                 if conflicting_bookings.exists():
                     # If admin is approving, they can override conflicts
                     if user_profile.role == 'ADMIN':
-                        # Get override choice
                         override_conflicts = form.cleaned_data.get('override_conflicts', False)
                         
-                        if override_conflicts:
-                            # Cancel all conflicting bookings and notify their owners
-                            for conflicting_booking in conflicting_bookings:
-                                # Change status to cancelled
-                                conflicting_booking.status = 'CANCELLED'
-                                conflicting_booking.rejected_reason = f"Automatically cancelled due to priority override by admin for {booking.title}"
-                                conflicting_booking.save()
-                                
-                                # Create notification for the affected user
-                                Notification.objects.create(
-                                    user=conflicting_booking.user,
-                                    title='Booking Cancelled Due to Override',
-                                    message=f'Your booking "{conflicting_booking.title}" for {conflicting_booking.room.name} on {conflicting_booking.start_time.strftime("%Y-%m-%d %H:%M")} has been cancelled due to a priority booking that required the same space. Please contact administration for more information.',
-                                    notification_type='BOOKING_CANCELLED',
-                                    booking=conflicting_booking
-                                )
-                                
-                                email_subject = f'Important: Your Booking Has Been Cancelled'
-                                email_message = f'''
-                                Dear {conflicting_booking.user.get_full_name() or conflicting_booking.user.username},
-                                
-                                We regret to inform you that your booking "{conflicting_booking.title}" for {conflicting_booking.room.name} on {conflicting_booking.start_time.strftime("%Y-%m-%d %H:%M")} has been cancelled.
-                                
-                                This cancellation occurred because an administrator has approved a higher priority booking that required the same space.
-                                
-                                You can book another space or time through the CampusSpaces system.
-                                
-                                If you have any questions, please contact the administration office.
-                                
-                                Regards,
-                                CampusSpaces System
-                                '''
-                                
-                                send_mail(email_subject, email_message, settings.DEFAULT_FROM_EMAIL, [conflicting_booking.user.email])
-                            
-                            messages.success(request, f'Booking approved successfully! {conflicting_bookings.count()} conflicting booking(s) were cancelled.')
-                        else:
+                        if not override_conflicts:
                             messages.error(request, 'There are conflicting bookings. Please use the override option to proceed or reject this booking.')
                             return redirect('booking_approval_detail', booking_id=booking.id)
-                    else:
-                        # Check organization level/seniority
+                        
+                        # Cancel all conflicting bookings and notify their owners
+                        for conflicting_booking in conflicting_bookings:
+                            # Change status to cancelled
+                            conflicting_booking.status = 'CANCELLED'
+                            conflicting_booking.rejected_reason = f"Automatically cancelled due to priority override by admin for {booking.title}"
+                            conflicting_booking.save()
+                            
+                            # Create notification for the affected user
+                            Notification.objects.create(
+                                user=conflicting_booking.user,
+                                title='Booking Cancelled Due to Override',
+                                message=f'Your booking "{conflicting_booking.title}" for {conflicting_booking.room.name} on {conflicting_booking.start_time.strftime("%Y-%m-%d %H:%M")} has been cancelled due to a priority booking that required the same space. Please contact administration for more information.',
+                                notification_type='BOOKING_CANCELLED',
+                                booking=conflicting_booking
+                            )
+                            
+                            # Email notification
+                            email_subject = f'Important: Your Booking Has Been Cancelled'
+                            email_message = f'''
+                            Dear {conflicting_booking.user.get_full_name() or conflicting_booking.user.username},
+                            
+                            We regret to inform you that your booking "{conflicting_booking.title}" for {conflicting_booking.room.name} on {conflicting_booking.start_time.strftime("%Y-%m-%d %H:%M")} has been cancelled.
+                            
+                            This cancellation occurred because an administrator has approved a higher priority booking that required the same space.
+                            
+                            You can book another space or time through the CampusSpaces system.
+                            
+                            If you have any questions, please contact the administration office.
+                            
+                            Regards,
+                            CampusSpaces System
+                            '''
+                            
+                            send_mail(email_subject, email_message, settings.DEFAULT_FROM_EMAIL, [conflicting_booking.user.email])
+                        
+                        messages.success(request, f'Conflicts resolved: {conflicting_bookings.count()} conflicting booking(s) were cancelled.')
+                    
+                    elif user_profile.role == 'FACULTY':
+                        # Faculty handling conflicts for organization bookings - check org level
                         booking_org_level = UserOrganization.objects.filter(
                             user__user=booking.user,
                             organization=booking.organization
@@ -486,41 +594,55 @@ def approve_booking(request, booking_id):
                         
                         if booking_org_level and booking_org_level.level >= 2:  # Representative or higher
                             # Allow faculty to handle conflicts for high-level organization members
-                            # But first confirm their intention to override
                             override_conflicts = form.cleaned_data.get('override_conflicts', False)
                             
-                            if override_conflicts:
-                                # Cancel all conflicting bookings
-                                for conflicting_booking in conflicting_bookings:
-                                    # Skip bookings by admin or same-level higher organization
-                                    conflicting_user_profile = getattr(conflicting_booking.user, 'profile', None)
-                                    if (conflicting_user_profile and conflicting_user_profile.role == 'ADMIN'):
-                                        messages.error(request, f'Cannot override booking by administrator: {conflicting_booking.title}')
-                                        return redirect('booking_approval_detail', booking_id=booking.id)
-                                    
-                                    # Change status to cancelled
-                                    conflicting_booking.status = 'CANCELLED'
-                                    conflicting_booking.rejected_reason = f"Automatically cancelled due to priority override for organization {booking.organization.name}"
-                                    conflicting_booking.save()
-                                    
-                                    # Create notification for the affected user
-                                    Notification.objects.create(
-                                        user=conflicting_booking.user,
-                                        title='Booking Cancelled Due to Organization Priority',
-                                        message=f'Your booking "{conflicting_booking.title}" for {conflicting_booking.room.name} on {conflicting_booking.start_time.strftime("%Y-%m-%d %H:%M")} has been cancelled due to a priority organization booking. Please contact the faculty for more information.',
-                                        notification_type='BOOKING_CANCELLED',
-                                        booking=conflicting_booking
-                                    )
-                                
-                                messages.success(request, f'Booking approved successfully! {conflicting_bookings.count()} conflicting booking(s) were cancelled.')
-                            else:
+                            if not override_conflicts:
                                 messages.error(request, 'There are conflicting bookings. Please use the override option to proceed or reject this booking.')
                                 return redirect('booking_approval_detail', booking_id=booking.id)
+                            
+                            # Cancel all conflicting bookings
+                            for conflicting_booking in conflicting_bookings:
+                                # Skip bookings by admin
+                                conflicting_user_profile = getattr(conflicting_booking.user, 'profile', None)
+                                if (conflicting_user_profile and conflicting_user_profile.role == 'ADMIN'):
+                                    messages.error(request, f'Cannot override booking by administrator: {conflicting_booking.title}')
+                                    return redirect('booking_approval_detail', booking_id=booking.id)
+                                
+                                # Change status to cancelled
+                                conflicting_booking.status = 'CANCELLED'
+                                conflicting_booking.rejected_reason = f"Automatically cancelled due to priority override for organization {booking.organization.name}"
+                                conflicting_booking.save()
+                                
+                                # Create notification for the affected user
+                                Notification.objects.create(
+                                    user=conflicting_booking.user,
+                                    title='Booking Cancelled Due to Organization Priority',
+                                    message=f'Your booking "{conflicting_booking.title}" for {conflicting_booking.room.name} on {conflicting_booking.start_time.strftime("%Y-%m-%d %H:%M")} has been cancelled due to a priority organization booking. Please contact the faculty for more information.',
+                                    notification_type='BOOKING_CANCELLED',
+                                    booking=conflicting_booking
+                                )
+                                email_subject = f'Important: Your Booking Has Been Cancelled'
+                                email_message = f'''
+                                Dear {conflicting_booking.user.get_full_name() or conflicting_booking.user.username},
+                                Your booking "{conflicting_booking.title}" for {conflicting_booking.room.name} on {conflicting_booking.start_time.strftime("%Y-%m-%d %H:%M")} has been cancelled.
+                                This cancellation occurred because a higher priority organization booking required the same space.
+                                You can book another space or time through the CampusSpaces system.
+                                If you have any questions, please contact the faculty.
+                                Regards,
+                                CampusSpaces System
+                                '''
+                                # Uncomment this in production
+                                send_mail(email_subject, email_message, settings.DEFAULT_FROM_EMAIL, [conflicting_booking.user.email])
+                            
+                            messages.success(request, f'Conflicts resolved: {conflicting_bookings.count()} conflicting booking(s) were cancelled.')
                         else:
                             messages.error(request, 'There are booking conflicts that could not be resolved automatically. This booking cannot be approved.')
                             return redirect('booking_approval_detail', booking_id=booking.id)
+                    else:
+                        messages.error(request, 'You do not have permission to override conflicting bookings.')
+                        return redirect('dashboard')
                 
-                # Process approval based on booking type and user role
+                # After handling any conflicts, process the approval based on booking type and user role
                 if booking.organization and booking.status == 'PENDING' and user_profile.role == 'FACULTY':
                     # Faculty approving student's organization booking
                     booking.status = 'FACULTY_APPROVED'
@@ -550,7 +672,7 @@ def approve_booking(request, booking_id):
                     messages.success(request, 'Organization booking approved by faculty. It now needs admin approval.')
                 
                 else:
-                    # Final approval (admin approving any booking)
+                    # Final approval (admin approving any booking, or faculty skipping first stage)
                     booking.status = 'APPROVED'
                     booking.approved_by = request.user
                     booking.save()
@@ -564,7 +686,30 @@ def approve_booking(request, booking_id):
                         booking=booking
                     )
                     
-                    # Notify HR personnel responsible for the room
+                    send_mail(
+                        subject=f'Booking Request Approved: {booking.title}',
+                        message=f'''
+                            Dear {booking.user.get_full_name() or booking.user.username},
+
+                            Your booking request "{booking.title}" for {booking.room.name} on {booking.start_time.strftime("%Y-%m-%d")} from {booking.start_time.strftime("%H:%M")} to {booking.end_time.strftime("%H:%M")} has been approved.
+
+                            Room: {booking.room.name} ({booking.room.building.name})
+                            Date: {booking.start_time.strftime("%Y-%m-%d")}
+                            Time: {booking.start_time.strftime("%H:%M")} - {booking.end_time.strftime("%H:%M")}
+                            {f"Organization: {booking.organization.name}" if booking.organization else ""}
+
+                            Please ensure you comply with all room usage policies.The room booking can be overriden if a higher priority event needs the room.
+                            The room will be ready for your use at the scheduled time.
+
+                            Regards,
+                            CampusSpaces System
+''',
+                        from_email=settings.DEFAULT_FROM_EMAIL,
+                        recipient_list=[booking.user.email],
+                        fail_silently=True,
+                    )
+                    
+                    # Notify HR personnel responsible for the room if applicable
                     if booking.room.hr_responsible:
                         # Email notification
                         hr_email = booking.room.hr_responsible.email
@@ -586,11 +731,15 @@ def approve_booking(request, booking_id):
                         CampusSpaces System
                         '''
                         
-                        # In a production environment, uncomment this to send actual emails
-                        # send_mail(email_subject, email_message, settings.DEFAULT_FROM_EMAIL, [hr_email])
+                        send_mail(
+                            subject=email_subject,
+                            message=email_message,
+                            from_email=settings.DEFAULT_FROM_EMAIL,
+                            recipient_list=[hr_email],
+                            fail_silently=True,
+                        )
                     
-                    if not conflicting_bookings.exists():
-                        messages.success(request, 'Booking approved successfully!')
+                    messages.success(request, 'Booking approved successfully!')
             
             elif action == 'REJECT':
                 booking.status = 'REJECTED'
@@ -635,11 +784,15 @@ def booking_approval_detail(request, booking_id):
         end_time__gt=booking.start_time
     ).exclude(id=booking.id)
     
+    # Check if this was a student booking that skipped faculty approval due to conflicts
+    skipped_faculty_approval = booking.status == 'FACULTY_APPROVED' and booking.faculty_approved_by is None
+    
     context = {
         'booking': booking,
         'booking_equipment': booking_equipment,
         'conflicting_bookings': conflicting_bookings,
         'form': BookingApprovalForm(),
+        'skipped_faculty_approval': skipped_faculty_approval,
     }
     
     return render(request, 'home/booking_approval_detail.html', context)

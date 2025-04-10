@@ -1,226 +1,171 @@
+{% extends 'home/dashboard.html' %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Register - CampusSpaces</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
-    <link rel="stylesheet" href="{% static 'home/styles.css' %}">
-    <link rel="icon" type="image/x-icon" href="{% static 'home/favicon.ico' %}">
-</head>
-<body>
 
-<!-- Navbar -->
-<nav class="navbar navbar-expand-lg navbar-light bg-light">
-  <div class="container-fluid">
-    <a class="navbar-brand" href="{% url 'index' %}">CampusSpaces</a>
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent">
-      <span class="navbar-toggler-icon"></span>
-    </button>
-    <div class="collapse navbar-collapse" id="navbarSupportedContent">
-      <ul class="navbar-nav ms-auto mb-2 px-2 mb-lg-0">
-        <li class="nav-item">
-          <a class="nav-link" href="{% url 'index' %}">Login</a>
-        </li>
-      </ul>
-    </div>
-  </div>
-</nav>
+{% block title %}Register New User{% endblock %}
 
-<!-- Registration Form Section -->
-<div class="container mt-5">
-  <div class="row justify-content-center">
-    <div class="col-md-8">
-      <div class="card shadow">
-        <div class="card-header bg-success text-white">
-          <h4 class="mb-0">Create an Account</h4>
-        </div>
-        <div class="card-body">
-
-          {% if messages %}
-            {% for message in messages %}
-              <div class="alert alert-{{ message.tags }}">{{ message.message }}</div>
-            {% endfor %}
-          {% endif %}
-
-          <form method="post" novalidate>
-            {% csrf_token %}
-
-            <div class="row mb-3">
-              <div class="col-md-6">
-                <label for="id_username" class="form-label">Username</label>
-                <input type="text" name="username" maxlength="150"
-                       class="form-control {% if form.username.errors %}is-invalid{% endif %}"
-                       id="id_username" value="{{ form.username.value|default:'' }}" required>
-                {% for error in form.username.errors %}
-                  <div class="invalid-feedback">{{ error }}</div>
-                {% endfor %}
-              </div>
-
-              <div class="col-md-6">
-                <label for="id_email" class="form-label">Email address</label>
-                <input type="email" name="email"
-                       class="form-control {% if form.email.errors %}is-invalid{% endif %}"
-                       id="id_email" value="{{ form.email.value|default:'' }}" required>
-                {% for error in form.email.errors %}
-                  <div class="invalid-feedback">{{ error }}</div>
-                {% endfor %}
-              </div>
-            </div>
-
-            <div class="row mb-3">
-              <div class="col-md-6">
-                <label for="id_first_name" class="form-label">First Name</label>
-                <input type="text" name="first_name" maxlength="30"
-                       class="form-control {% if form.first_name.errors %}is-invalid{% endif %}"
-                       id="id_first_name" value="{{ form.first_name.value|default:'' }}" required>
-                {% for error in form.first_name.errors %}
-                  <div class="invalid-feedback">{{ error }}</div>
-                {% endfor %}
-              </div>
-
-              <div class="col-md-6">
-                <label for="id_last_name" class="form-label">Last Name</label>
-                <input type="text" name="last_name" maxlength="30"
-                       class="form-control {% if form.last_name.errors %}is-invalid{% endif %}"
-                       id="id_last_name" value="{{ form.last_name.value|default:'' }}" required>
-                {% for error in form.last_name.errors %}
-                  <div class="invalid-feedback">{{ error }}</div>
-                {% endfor %}
-              </div>
-            </div>
-
-            <div class="row mb-3">
-              <div class="col-md-6">
-                <label for="id_phone" class="form-label">Phone Number</label>
-                <input type="text" name="phone" maxlength="15"
-                       class="form-control {% if form.phone.errors %}is-invalid{% endif %}"
-                       id="id_phone" value="{{ form.phone.value|default:'' }}" required>
-                {% for error in form.phone.errors %}
-                  <div class="invalid-feedback">{{ error }}</div>
-                {% endfor %}
-              </div>
-
-              <div class="col-md-6">
-                <label for="id_role" class="form-label">Role</label>
-                <select name="role" class="form-select {% if form.role.errors %}is-invalid{% endif %}" id="id_role" required>
-                  <option value="">Select your role</option>
-                  <option value="STUDENT" {% if form.role.value == "STUDENT" %}selected{% endif %}>Student</option>
-                  <option value="FACULTY" {% if form.role.value == "FACULTY" %}selected{% endif %}>Faculty</option>
-                </select>
-                {% for error in form.role.errors %}
-                  <div class="invalid-feedback">{{ error }}</div>
-                {% endfor %}
-              </div>
-            </div>
-
-            <!-- New organization and role fields -->
-            <div class="row mb-3">
-              <div class="col-md-6">
-                <label for="id_organization" class="form-label">Organization</label>
-                <select name="organization" class="form-select {% if form.organization.errors %}is-invalid{% endif %}" id="id_organization">
-                  <option value="">Select an organization</option>
-                  {% for org in organizations %}
-                    <option value="{{ org.id }}" {% if form.organization.value == org.id %}selected{% endif %}>{{ org.name }} ({{ org.get_type_display }})</option>
-                  {% endfor %}
-                </select>
-                {% for error in form.organization.errors %}
-                  <div class="invalid-feedback">{{ error }}</div>
-                {% endfor %}
-                <div class="form-text">Select your organization if applicable.</div>
-              </div>
-
-              <div class="col-md-6">
-                <label for="id_organization_role" class="form-label">Organization Role</label>
-                <select name="organization_role" class="form-select {% if form.organization_role.errors %}is-invalid{% endif %}" id="id_organization_role">
-                  <option value="">Select your role in the organization</option>
-                  <option value="1" {% if form.organization_role.value == "1" %}selected{% endif %}>Member</option>
-                  <option value="2" {% if form.organization_role.value == "2" %}selected{% endif %}>Representative</option>
-                  <option value="3" {% if form.organization_role.value == "3" %}selected{% endif %}>Leader</option>
-                </select>
-                {% for error in form.organization_role.errors %}
-                  <div class="invalid-feedback">{{ error }}</div>
-                {% endfor %}
-                <div class="form-text">Select your role in the organization if applicable.</div>
-              </div>
-            </div>
-
-            <div class="row mb-3">
-              <div class="col-md-6">
-                <label for="id_password1" class="form-label">Password</label>
-                <input type="password" name="password1"
-                       class="form-control {% if form.password1.errors %}is-invalid{% endif %}"
-                       id="id_password1" required>
-                {% for error in form.password1.errors %}
-                  <div class="invalid-feedback">{{ error }}</div>
-                {% endfor %}
-                <div class="form-text">
-                  Your password must contain at least 8 characters and can't be entirely numeric.
-                </div>
-              </div>
-
-              <div class="col-md-6">
-                <label for="id_password2" class="form-label">Confirm Password</label>
-                <input type="password" name="password2"
-                       class="form-control {% if form.password2.errors %}is-invalid{% endif %}"
-                       id="id_password2" required>
-                {% for error in form.password2.errors %}
-                  <div class="invalid-feedback">{{ error }}</div>
-                {% endfor %}
-              </div>
-            </div>
-
-            <div class="d-grid gap-2">
-              <button type="submit" class="btn btn-success">Register</button>
-            </div>
-
-            <div class="mt-3 text-center">
-              <p>Already have an account? <a href="{% url 'index' %}">Login here</a></p>
-            </div>
-
-          </form>
-
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Footer Section -->
-<footer class="text-white text-center py-3 mt-5" style="background-color: #3e4a24;">
-  <div class="container">
-    <p class="mb-0">&copy; 2025 CampusSpaces. All Rights Reserved.</p>
-  </div>
-</footer>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
-
-<!-- Script to handle organization field dependency -->
-<script>
-  document.addEventListener('DOMContentLoaded', function() {
-    const orgField = document.getElementById('id_organization');
-    const roleField = document.getElementById('id_organization_role');
-    
-    // Function to toggle organization role field based on organization selection
-    function toggleOrgRole() {
-      if (orgField.value) {
-        roleField.removeAttribute('disabled');
-        roleField.required = true;
-      } else {
-        roleField.setAttribute('disabled', 'disabled');
-        roleField.value = '';
-        roleField.required = false;
-      }
+{% block extra_head %}
+<style>
+    .org-checkbox {
+        margin-bottom: 10px;
+        padding: 10px;
+        border-radius: 5px;
+        background-color: #f8f9fa;
+        transition: background-color 0.2s;
     }
     
-    // Initial state
-    toggleOrgRole();
+    .org-checkbox:hover {
+        background-color: #e9ecef;
+    }
     
-    // Add event listener
-    orgField.addEventListener('change', toggleOrgRole);
-  });
-</script>
+    .org-checkbox.selected {
+        background-color: #d1e7ff;
+    }
+    
+    .org-checkbox input[type="checkbox"] {
+        margin-right: 10px;
+    }
+</style>
+{% endblock %}
 
-</body>
-</html>
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">Register New User</h3>
+                </div>
+                <div class="card-body">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        
+                        <!-- Display form errors -->
+                        {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {% for error in form.non_field_errors %}
+                            {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Basic user information fields -->
+                        <div class="form-group mb-3">
+                            <label for="{{ form.username.id_for_label }}" class="form-label">Username</label>
+                            {{ form.username }}
+                            {% if form.username.errors %}
+                            <div class="invalid-feedback d-block">{{ form.username.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="{{ form.first_name.id_for_label }}" class="form-label">First Name</label>
+                                {{ form.first_name }}
+                                {% if form.first_name.errors %}
+                                <div class="invalid-feedback d-block">{{ form.first_name.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.last_name.id_for_label }}" class="form-label">Last Name</label>
+                                {{ form.last_name }}
+                                {% if form.last_name.errors %}
+                                <div class="invalid-feedback d-block">{{ form.last_name.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="{{ form.email.id_for_label }}" class="form-label">Email</label>
+                            {{ form.email }}
+                            {% if form.email.errors %}
+                            <div class="invalid-feedback d-block">{{ form.email.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="{{ form.role.id_for_label }}" class="form-label">Role</label>
+                            {{ form.role }}
+                            {% if form.role.errors %}
+                            <div class="invalid-feedback d-block">{{ form.role.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="{{ form.password1.id_for_label }}" class="form-label">Password</label>
+                            {{ form.password1 }}
+                            {% if form.password1.errors %}
+                            <div class="invalid-feedback d-block">{{ form.password1.errors }}</div>
+                            {% endif %}
+                            <small class="form-text text-muted">{{ form.password1.help_text }}</small>
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="{{ form.password2.id_for_label }}" class="form-label">Confirm Password</label>
+                            {{ form.password2 }}
+                            {% if form.password2.errors %}
+                            <div class="invalid-feedback d-block">{{ form.password2.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Organizations section with custom UI -->
+                        <div class="form-group mb-3">
+                            <label class="mb-2">Organizations</label>
+                            <div class="border p-3 rounded">
+                                <div id="organization-list">
+                                    {% for org in organizations %}
+                                    <div class="org-checkbox" data-org-id="{{ org.id }}">
+                                        <input type="checkbox" id="org_{{ org.id }}" value="{{ org.id }}" class="org-selector">
+                                        <label for="org_{{ org.id }}">{{ org.name }} ({{ org.get_type_display }})</label>
+                                    </div>
+                                    {% empty %}
+                                    <p class="text-muted">No organizations available. Please create organizations first.</p>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {{ form.selected_organizations }}
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">Register User</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const orgCheckboxes = document.querySelectorAll('.org-selector');
+        const selectedOrgsInput = document.querySelector('#id_selected_organizations');
+        
+        // Function to update the hidden input with selected org IDs
+        function updateSelectedOrgs() {
+            const selectedIds = [];
+            
+            orgCheckboxes.forEach(checkbox => {
+                if (checkbox.checked) {
+                    selectedIds.push(checkbox.value);
+                    checkbox.closest('.org-checkbox').classList.add('selected');
+                } else {
+                    checkbox.closest('.org-checkbox').classList.remove('selected');
+                }
+            });
+            
+            selectedOrgsInput.value = selectedIds.join(',');
+            console.log("Selected organizations:", selectedOrgsInput.value);
+        }
+        
+        // Add event listeners to all checkboxes
+        orgCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', updateSelectedOrgs);
+        });
+        
+        // Initialize the hidden field
+        updateSelectedOrgs();
+    });
+</script>
+{% endblock %}

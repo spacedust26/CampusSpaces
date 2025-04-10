@@ -1,174 +1,338 @@
-{% extends "home/dashboard.html" %}
-{% load static %}
-
+{% extends 'home/dashboard.html' %} 
+{% block title %}Booking Details{% endblock %} 
 {% block content %}
-<div class="row mb-4">
-    <div class="col-12">
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
-                <li class="breadcrumb-item active" aria-current="page">Booking Details</li>
-            </ol>
-        </nav>
-        <h1 class="display-5">Booking Request Details</h1>
-        <p class="lead">Review the booking request and make a decision.</p>
-    </div>
-</div>
+<div class="container mt-4">
+	<div class="row">
+		<div class="col-md-12">
+			<nav aria-label="breadcrumb">
+				<ol class="breadcrumb">
+					<li class="breadcrumb-item">
+						<a href="{% url 'dashboard' %}">Dashboard</a>
+					</li>
+					<li class="breadcrumb-item active" aria-current="page">
+						Booking Details
+					</li>
+				</ol>
+			</nav>
 
-<div class="row">
-    <!-- Booking Details Section -->
-    <div class="col-md-8">
-        <div class="card shadow-sm">
-            <div class="card-header bg-warning text-dark">
-                <h5 class="mb-0">Booking Information</h5>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <h6>Event Information</h6>
-                        <ul class="list-group list-group-flush mb-3">
-                            <li class="list-group-item"><strong>Title:</strong> {{ booking.title }}</li>
-                            <li class="list-group-item"><strong>Description:</strong> {{ booking.description|default:"No description provided." }}</li>
-                            <li class="list-group-item"><strong>Date:</strong> {{ booking.start_time|date:"M d, Y" }}</li>
-                            <li class="list-group-item"><strong>Time:</strong> {{ booking.start_time|time:"H:i" }} - {{ booking.end_time|time:"H:i" }}</li>
-                            {% if booking.organization %}
-                            <li class="list-group-item"><strong>Organization:</strong> {{ booking.organization.name }}</li>
-                            {% endif %}
-                            <li class="list-group-item"><strong>Requested By:</strong> {{ booking.user.get_full_name|default:booking.user.username }}</li>
-                            <li class="list-group-item"><strong>Requested On:</strong> {{ booking.created_at|date:"M d, Y H:i" }}</li>
-                        </ul>
-                    </div>
-                    <div class="col-md-6">
-                        <h6>Room Information</h6>
-                        <ul class="list-group list-group-flush mb-3">
-                            <li class="list-group-item"><strong>Room:</strong> {{ booking.room.name }}</li>
-                            <li class="list-group-item"><strong>Building:</strong> {{ booking.room.building.name }}</li>
-                            <li class="list-group-item"><strong>Room Number:</strong> {{ booking.room.room_number }}</li>
-                            <li class="list-group-item"><strong>Capacity:</strong> {{ booking.room.capacity }} people</li>
-                            <li class="list-group-item"><strong>Type:</strong> {{ booking.room.get_room_type_display }}</li>
-                        </ul>
-                    </div>
-                </div>
-                
-                {% if booking_equipment %}
-                <h6>Additional Equipment</h6>
-                <ul class="list-group list-group-flush">
-                    {% for item in booking_equipment %}
-                    <li class="list-group-item">
-                        {{ item.equipment.name }} ({{ item.equipment.get_equipment_type_display }})
-                        {% if item.equipment.room %}
-                        <small class="text-light">Room: {{ item.equipment.room.room_number }}</small>
-                        {% endif %}
-                    </li>
-                    {% endfor %}
-                </ul>
-                {% endif %}
-            </div>
-        </div>
-        
-        <!-- Conflicting Bookings Section (if any) -->
-        {% if conflicting_bookings %}
-        <div class="card shadow-sm mt-4">
-            <div class="card-header bg-danger text-white">
-                <h5 class="mb-0">Conflicting Bookings</h5>
-            </div>
-            <div class="card-body">
-                <div class="alert alert-danger">
-                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                    There are existing approved bookings that conflict with this request.
-                </div>
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th>Event</th>
-                                <th>Booked By</th>
-                                <th>Organization</th>
-                                <th>Date & Time</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for conflict in conflicting_bookings %}
-                            <tr>
-                                <td>{{ conflict.title }}</td>
-                                <td>{{ conflict.user.get_full_name|default:conflict.user.username }}</td>
-                                <td>{{ conflict.organization.name|default:"N/A" }}</td>
-                                <td>{{ conflict.start_time|date:"M d, Y" }} {{ conflict.start_time|time:"H:i" }} - {{ conflict.end_time|time:"H:i" }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-                <div class="alert alert-info mt-3">
-                    <h6>Conflict Resolution Guidelines:</h6>
-                    <ul>
-                        <li>Faculty members have priority over students.</li>
-                        <li>Higher-level organization representatives have priority.</li>
-                        <li>As an admin, you can override existing bookings if necessary.</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-        {% endif %}
-    </div>
-    
-    <!-- Approval Actions Section -->
-    <div class="col-md-4">
-        <div class="card shadow-sm">
-            <div class="card-header bg-success text-white">
-                <h5 class="mb-0">Take Action</h5>
-            </div>
-            <div class="card-body">
-                <p>Please review the booking request and make a decision.</p>
-                <div class="d-grid gap-2">
-                    <a href="{% url 'approve_booking' booking.id %}" class="btn btn-success">Proceed to Decision</a>
-                    <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">Back to Dashboard</a>
-                </div>
-            </div>
-        </div>
-        
-        <!-- User Information Section -->
-        <div class="card shadow-sm mt-4">
-            <div class="card-header bg-info text-white">
-                <h5 class="mb-0">Requester Information</h5>
-            </div>
-            <div class="card-body">
-                <div class="d-flex align-items-center mb-3">
-                    <div class="flex-shrink-0">
-                        <div class="bg-light rounded-circle d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
-                            <i class="bi bi-person-fill" style="font-size: 2rem;"></i>
-                        </div>
-                    </div>
-                    <div class="flex-grow-1 ms-3">
-                        <h5 class="mb-0">{{ booking.user.get_full_name|default:booking.user.username }}</h5>
-                        <p class="text-light mb-0">{{ booking.user.email }}</p>
-                        <p class="text-light mb-0">{{ booking.user.profile.get_role_display }}</p>
-                    </div>
-                </div>
-                
-                {% if booking.user.profile.organizations.all %}
-                <h6>Organizations</h6>
-                <ul class="list-group list-group-flush">
-                    {% for org in booking.user.profile.organizations.all %}
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        {{ org.name }}
-                        <span class="badge bg-primary rounded-pill">
-                            {% with user_org=booking.user.profile.userorganization_set.get %}
-                            {% if user_org.level == 1 %}
-                                Member
-                            {% elif user_org.level == 2 %}
-                                Representative
-                            {% elif user_org.level == 3 %}
-                                Leader
-                            {% endif %}
-                            {% endwith %}
-                        </span>
-                    </li>
-                    {% endfor %}
-                </ul>
-                {% endif %}
-            </div>
-        </div>
-    </div>
+			<div class="card mb-4">
+				<div
+					class="card-header d-flex justify-content-between align-items-center"
+				>
+					<h4 class="mb-0">Booking Details</h4>
+					<span
+						class="badge {% if booking.status == 'PENDING' %}bg-warning{% elif booking.status == 'FACULTY_APPROVED' %}bg-info{% elif booking.status == 'APPROVED' %}bg-success{% elif booking.status == 'REJECTED' %}bg-danger{% elif booking.status == 'CANCELLED' %}bg-secondary{% endif %}"
+					>
+						{{ booking.get_status_display }}
+					</span>
+				</div>
+				<div class="card-body">
+					<div class="row">
+						<div class="col-md-6">
+							<h5>Booking Information</h5>
+							<table class="table table-bordered">
+								<tr>
+									<th>Title</th>
+									<td>{{ booking.title }}</td>
+								</tr>
+								<tr>
+									<th>Room</th>
+									<td>
+										{{ booking.room.name }} ({{booking.room.room_number }})
+									</td>
+								</tr>
+								<tr>
+									<th>Building</th>
+									<td>{{ booking.room.building.name }}</td>
+								</tr>
+								<tr>
+									<th>Organization</th>
+									<td>
+										{{booking.organization.name|default:"Booking" }}
+									</td>
+								</tr>
+								<tr>
+									<th>Start Time</th>
+									<td>
+										{{ booking.start_time }}
+									</td>
+								</tr>
+								<tr>
+									<th>End Time</th>
+									<td>
+										{{ booking.end_time	}}
+									</td>
+								</tr>
+								<tr>
+									<th>Created By</th>
+									<td>
+										{{booking.user.get_full_name|default:booking.user.username}}
+									</td>
+								</tr>
+								<tr>
+									<th>User Role</th>
+									<td>
+										{{ booking.user.profile.get_role_display}}
+									</td>
+								</tr>
+								<tr>
+									<th>Created At</th>
+									<td>
+										{{ booking.created_at }}
+									</td>
+								</tr>
+								{% if booking.faculty_approved_by %}
+								<tr>
+									<th>Faculty Approved By</th>
+									<td>
+										{{booking.faculty_approved_by.get_full_name|default:booking.faculty_approved_by.username}}
+									</td>
+								</tr>
+								 {% elif booking.status == 'FACULTY_APPROVED' %}
+								<tr>
+									<th>Faculty Approval</th>
+									<td>
+										<span class="badge bg-info">Skipped due to conflicts</span>
+									</td>
+								</tr>
+								{% endif %}
+							</table>
+						</div>
+						<div class="col-md-6">
+							<h5>Description</h5>
+							<div class="card mb-4">
+								<div class="card-body">
+									{% if booking.description %} 
+									{{booking.description|linebreaks }} 
+                  {% else %}
+									<p class="text-muted">
+										No description provided.
+									</p>
+									{% endif %}
+								</div>
+							</div>
+
+							{% if booking_equipment.exists %}
+							<h5>Requested Equipment</h5>
+							<div class="card">
+								<div class="card-body">
+									<ul class="list-group list-group-flush">
+										{% for be in booking_equipment %}
+										<li class="list-group-item">
+											{{ be.equipment.name }} - {{be.equipment.get_equipment_type_display}}
+										</li>
+										{% endfor %}
+									</ul>
+								</div>
+							</div>
+							{% endif %}
+						</div>
+					</div>
+
+					<!-- Conflicting Bookings Section -->
+					{% if conflicting_bookings.exists %}
+					<div class="row mt-4">
+						<div class="col-12">
+							<div class="alert alert-danger">
+								<h5 class="alert-heading">
+									<i
+										class="fas fa-exclamation-triangle me-2"
+									></i
+									>Conflicting Bookings
+								</h5>
+								<p>
+									The following bookings conflict with this
+									request:
+								</p>
+								<div class="table-responsive">
+									<table
+										class="table table-sm table-bordered"
+									>
+										<thead>
+											<tr>
+												<th>Title</th>
+												<th>User</th>
+												<th>Organization</th>
+												<th>Start Time</th>
+												<th>End Time</th>
+											</tr>
+										</thead>
+										<tbody>
+											{% for conflicting in	conflicting_bookings %}
+											<tr>
+												<td>{{ conflicting.title }}</td>
+												<td>
+													{{ conflicting.user.get_full_name|default:conflicting.user.username}}
+												</td>
+												<td>
+													{{conflicting.organization.name|default:"Booking" }}
+												</td>
+												<td>
+													{{conflicting.start_time}}
+												</td>
+												<td>
+													{{conflicting.end_time }}
+												</td>
+											</tr>
+											{% endfor %}
+										</tbody>
+									</table>
+								</div>
+								<p class="mt-3 mb-0">
+									<strong>Note:</strong> Approving this
+									booking with the override option will cancel
+									the conflicting bookings listed above.
+								</p>
+							</div>
+						</div>
+					</div>
+					{% endif %}
+
+					<!-- Action Form -->
+					<div class="row mt-4">
+						<div class="col-12">
+							<div class="card">
+								<div class="card-header bg-primary text-white">
+									<h5 class="mb-0">Approval Action</h5>
+								</div>
+								<div class="card-body">
+									<form
+										method="post"
+										action="{% url 'approve_booking' booking.id %}"
+									>
+										{% csrf_token %}
+
+										<div class="mb-3">
+											<label class="form-label fw-bold"
+												>Select Action:</label
+											>
+											<div class="form-check">
+												<input
+													class="form-check-input"
+													type="radio"
+													name="action"
+													id="action_approve"
+													value="APPROVE"
+													checked
+												/>
+												<label
+													class="form-check-label"
+													for="action_approve"
+												>
+													Approve Booking
+												</label>
+											</div>
+											<div class="form-check">
+												<input
+													class="form-check-input"
+													type="radio"
+													name="action"
+													id="action_reject"
+													value="REJECT"
+												/>
+												<label
+													class="form-check-label"
+													for="action_reject"
+												>
+													Reject Booking
+												</label>
+											</div>
+										</div>
+
+										<!-- Override conflicts checkbox -->
+										{% if conflicting_bookings.exists %}
+										<div class="mb-3 override-section">
+											<div class="form-check">
+												<input class="form-check-input" type="checkbox" name="override_conflicts" id="id_override_conflicts" value="True">
+												<label class="form-check-label" for="id_override_conflicts">
+													<strong>Override conflicting bookings</strong>
+												</label>
+												<div class="form-text text-danger">
+													Checking this option will cancel all conflicting bookings and approve this one instead.
+												</div>
+											</div>
+										</div>
+										{% endif %}
+
+										<div
+											class="mb-3 rejection-reason"
+											style="display: none"
+										>
+											<label
+												for="id_rejected_reason"
+												class="form-label fw-bold"
+												>Rejection Reason:</label
+											>
+											<textarea
+												class="form-control"
+												id="id_rejected_reason"
+												name="rejected_reason"
+												rows="3"
+											></textarea>
+											<div class="form-text">
+												Please provide a reason for
+												rejecting this booking request.
+											</div>
+										</div>
+
+										<div
+											class="d-flex justify-content-between"
+										>
+											<a
+												href="{% url 'dashboard' %}"
+												class="btn btn-secondary"
+												>Back to Dashboard</a
+											>
+											<button
+												type="submit"
+												class="btn btn-primary"
+											>
+												Submit Decision
+											</button>
+										</div>
+									</form>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
 </div>
+{% endblock %} 
+{% block extra_js %}
+<script>
+	document.addEventListener('DOMContentLoaded', function () {
+		// Show/hide rejection reason based on selected action
+		const actionInputs = document.querySelectorAll('input[name="action"]');
+		const rejectionSection = document.querySelector('.rejection-reason');
+
+		function updateFormVisibility() {
+			const selectedAction = document.querySelector(
+				'input[name="action"]:checked'
+			).value;
+
+			if (selectedAction === 'REJECT') {
+				rejectionSection.style.display = 'block';
+				document
+					.getElementById('id_rejected_reason')
+					.setAttribute('required', 'required');
+			} else {
+				rejectionSection.style.display = 'none';
+				document
+					.getElementById('id_rejected_reason')
+					.removeAttribute('required');
+			}
+		}
+
+		// Initial visibility
+		updateFormVisibility();
+
+		// Add event listeners
+		actionInputs.forEach((input) => {
+			input.addEventListener('change', updateFormVisibility);
+		});
+	});
+</script>
 {% endblock %}

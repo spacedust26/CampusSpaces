@@ -1,0 +1,83 @@
+/* Form styling */
+.form-group {
+	margin-bottom: 1rem;
+}
+
+.form-control,
+select.form-select,
+input[type='text'],
+input[type='email'],
+input[type='password'],
+textarea {
+	display: block;
+	width: 100%;
+	padding: 0.375rem 0.75rem;
+	font-size: 1rem;
+	font-weight: 400;
+	line-height: 1.5;
+	color: #495057;
+	background-color: #fff;
+	background-clip: padding-box;
+	border: 1px solid #ced4da;
+	border-radius: 0.25rem;
+	transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.form-control:focus {
+	color: #495057;
+	background-color: #fff;
+	border-color: #80bdff;
+	outline: 0;
+	box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+/* Checkboxes styling */
+.checkbox-group {
+	padding: 10px;
+	max-height: 200px;
+	overflow-y: auto;
+	border: 1px solid #ced4da;
+	border-radius: 0.25rem;
+}
+
+.checkbox-item {
+	display: block;
+	margin-bottom: 5px;
+}
+
+/* Fix for Django's form rendering */
+form ul {
+	list-style-type: none;
+	padding-left: 0;
+	margin-bottom: 0;
+}
+
+/* Error messages */
+.invalid-feedback {
+	display: block;
+	width: 100%;
+	margin-top: 0.25rem;
+	font-size: 80%;
+	color: #dc3545;
+}
+
+/* Organization checkbox styling */
+.org-checkbox {
+	margin-bottom: 10px;
+	padding: 10px;
+	border-radius: 5px;
+	background-color: #f8f9fa;
+	transition: background-color 0.2s;
+}
+
+.org-checkbox:hover {
+	background-color: #e9ecef;
+}
+
+.org-checkbox.selected {
+	background-color: #d1e7ff;
+}
+
+.org-checkbox input[type='checkbox'] {
+	margin-right: 10px;
+}

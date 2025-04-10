@@ -21,14 +21,15 @@ class Organization(models.Model):
 
 class UserProfile(models.Model):
     """Extended user profile with role information"""
-    ROLES = [
+    # Define role choices
+    ROLE_CHOICES = [
         ('STUDENT', 'Student'),
         ('FACULTY', 'Faculty'),
-        ('ADMIN', 'Administrator'),
+        ('ADMIN', 'Administrator')
     ]
     
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
-    role = models.CharField(max_length=20, choices=ROLES)
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='STUDENT')
     phone = models.CharField(max_length=15, blank=True, null=True)
     organizations = models.ManyToManyField(Organization, through='UserOrganization')
     
@@ -39,7 +40,6 @@ class UserOrganization(models.Model):
     """Relationship between users and organizations with hierarchy level"""
     LEVELS = [
         (1, 'Member'),
-        (2, 'Representative'),
         (3, 'Leader'),
     ]
     
@@ -197,6 +197,13 @@ class Booking(models.Model):
             # Organization bookings need admin approval after faculty approval
             # or directly if booked by faculty
             return self.status == 'FACULTY_APPROVED' or self.can_skip_faculty_approval()
+    
+    def skipped_faculty_approval(self):
+        """Check if faculty approval was skipped due to conflicts"""
+        return (self.status == 'FACULTY_APPROVED' and 
+                self.faculty_approved_by is None and 
+                hasattr(self.user, 'profile') and 
+                self.user.profile.role == 'STUDENT')
 
 class BookingEquipment(models.Model):
     """Many-to-many relationship between bookings and equipment"""

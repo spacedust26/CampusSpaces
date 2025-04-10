@@ -169,6 +169,8 @@
             </a></li>
             {% if user.profile.role == 'ADMIN' %}
             <li><a href="{% url 'admin:index' %}"><i class="bi bi-gear-fill"></i> Admin Panel</a></li>
+            <li><a href="{% url 'register' %}"><i class="bi bi-gear-fill"></i>Register</a></li>
+
             {% endif %}
             <li style="background-color: rgb(87, 21, 21);"><a href="{% url 'logout' %}"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
         </ul>
