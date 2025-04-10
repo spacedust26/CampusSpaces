@@ -1,4 +1,5 @@
-{% extends 'home/dashboard.html' %} {% block title %}Booking Details{% endblock %} 
+{% extends 'home/dashboard.html' %} 
+{% block title %}Booking Details{% endblock %} 
 {% block content %}
 <div class="container mt-4">
 	<div class="row">
@@ -87,6 +88,13 @@
 										{{booking.faculty_approved_by.get_full_name|default:booking.faculty_approved_by.username}}
 									</td>
 								</tr>
+								 {% elif booking.status == 'FACULTY_APPROVED' %}
+								<tr>
+									<th>Faculty Approval</th>
+									<td>
+										<span class="badge bg-info">Skipped due to conflicts</span>
+									</td>
+								</tr>
 								{% endif %}
 							</table>
 						</div>
@@ -94,7 +102,8 @@
 							<h5>Description</h5>
 							<div class="card mb-4">
 								<div class="card-body">
-									{% if booking.description %} {{booking.description|linebreaks }} 
+									{% if booking.description %} 
+									{{booking.description|linebreaks }} 
                   {% else %}
 									<p class="text-muted">
 										No description provided.
@@ -153,8 +162,7 @@
 											<tr>
 												<td>{{ conflicting.title }}</td>
 												<td>
-													{{
-													conflicting.user.get_full_name|default:conflicting.user.username}}
+													{{ conflicting.user.get_full_name|default:conflicting.user.username}}
 												</td>
 												<td>
 													{{conflicting.organization.name|default:"Booking" }}
@@ -231,32 +239,16 @@
 											</div>
 										</div>
 
+										<!-- Override conflicts checkbox -->
 										{% if conflicting_bookings.exists %}
-										<div
-											class="mb-3 override-section alert alert-warning"
-										>
+										<div class="mb-3 override-section">
 											<div class="form-check">
-												<input
-													class="form-check-input"
-													type="checkbox"
-													name="override_conflicts"
-													id="id_override_conflicts"
-													value="True"
-												/>
-												<label
-													class="form-check-label fw-bold"
-													for="id_override_conflicts"
-												>
-													Override conflicting
-													bookings
+												<input class="form-check-input" type="checkbox" name="override_conflicts" id="id_override_conflicts" value="True">
+												<label class="form-check-label" for="id_override_conflicts">
+													<strong>Override conflicting bookings</strong>
 												</label>
-												<div
-													class="form-text text-danger"
-												>
-													Checking this option will
-													cancel all conflicting
-													bookings and approve this
-													one instead.
+												<div class="form-text text-danger">
+													Checking this option will cancel all conflicting bookings and approve this one instead.
 												</div>
 											</div>
 										</div>

@@ -110,7 +110,7 @@ class BookingApprovalForm(forms.Form):
         help_text="Required if rejecting the booking"
     )
     override_conflicts = forms.BooleanField(
-        required=False,
+        required=False, 
         initial=False,
         label="Override conflicting bookings",
         help_text="Check this to cancel conflicting bookings and approve this one instead",

@@ -197,6 +197,13 @@ class Booking(models.Model):
             # Organization bookings need admin approval after faculty approval
             # or directly if booked by faculty
             return self.status == 'FACULTY_APPROVED' or self.can_skip_faculty_approval()
+    
+    def skipped_faculty_approval(self):
+        """Check if faculty approval was skipped due to conflicts"""
+        return (self.status == 'FACULTY_APPROVED' and 
+                self.faculty_approved_by is None and 
+                hasattr(self.user, 'profile') and 
+                self.user.profile.role == 'STUDENT')
 
 class BookingEquipment(models.Model):
     """Many-to-many relationship between bookings and equipment"""
